@@ -1,0 +1,16 @@
+{
+  "name": "bolsa-front",
+  "dependencies": {
+    "react": "^17.x",
+    "react-dom": "^17.x"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.4.35",
+    "shadow-cljs": "^3.3.1",
+    "tailwindcss": "^4.1.17"
+  },
+  "scripts": {
+    "watch:css": "tailwindcss -i ./resources/public/css/input.css -o ./resources/public/css/screen.css --watch"
+  }
+}
