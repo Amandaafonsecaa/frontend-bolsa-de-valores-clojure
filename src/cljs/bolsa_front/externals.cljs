@@ -111,7 +111,7 @@
                           (js/console.error "Erro na Venda:" erro)
                           (swap! app-state assoc :erro "Falha na Venda." :carregando? false))}))
 (defn atualizar-tudo! []
-  (carregar-dados!)
+  (extrato!)
   (ver-saldo)
   (valor-investido)
   (lucro))
