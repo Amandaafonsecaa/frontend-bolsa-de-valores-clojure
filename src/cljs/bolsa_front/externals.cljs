@@ -105,7 +105,7 @@
          :handler (fn [resposta]
                     (js/console.log "Venda realizada:" resposta)
                     (js/alert "Venda realizada com sucesso!")
-                    (carregar-dados!))
+                    (extrato!))
          
          :error-handler (fn [erro]
                           (js/console.error "Erro na Venda:" erro)
