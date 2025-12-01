@@ -12,7 +12,7 @@
 (def api-url "http://localhost:3000")
 
 ;; Carteira 
-(defn carregar-dados! []
+(defn extrato! []
   (swap! app-state assoc :carregando? true :erro nil)
 
   (GET (str api-url "/carteira/extrato")
@@ -86,7 +86,7 @@
                     (js/console.log "Compra realizada:" resposta)
                     ;; MUDANÇA 3: Feedback visual pro usuário
                     (js/alert "Compra realizada com sucesso!")
-                    (carregar-dados!))
+                    (extrato!))
          
          :error-handler (fn [erro]
                           (js/console.error "Erro na Compra:" erro)
@@ -110,3 +110,8 @@
          :error-handler (fn [erro]
                           (js/console.error "Erro na Venda:" erro)
                           (swap! app-state assoc :erro "Falha na Venda." :carregando? false))}))
+(defn atualizar-tudo! []
+  (carregar-dados!)
+  (ver-saldo)
+  (valor-investido)
+  (lucro))
