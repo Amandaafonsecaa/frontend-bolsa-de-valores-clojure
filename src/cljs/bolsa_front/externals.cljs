@@ -3,7 +3,7 @@
             [ajax.core :refer [GET POST]]))
 
 (defonce app-state (r/atom {:acoes []          ;; Lista do extrato
-                            :saldo 0.0         ;; Saldo em caixa
+                            :saldo 0.0         
                             :total-investido 0.0
                             :lucro-prejuizo 0.0
                             :carregando? false
@@ -25,7 +25,6 @@
                 :keywords? true}
   )
 
-  ;; MUDANÇA 1: Usando (str api-url ...) em vez de digitar tudo
 )
 
 (defn ver-saldo [] 
