@@ -6,6 +6,7 @@
                             :saldo 0.0         
                             :total-investido 0.0
                             :lucro-prejuizo 0.0
+                            :patrimonio 0.0
                             :carregando? false
                             :erro nil}))
 
@@ -25,6 +26,20 @@
                 :keywords? true}
   )
 
+)
+
+(defn patrimonio! []
+  (swap! app-state assoc :carregando? true :erro nil)
+
+  (GET (str api-url "/carteira/patrimonio")
+    {:handler (fn[resposta]
+                (js/console.log "Patrimônio:" resposta)
+                (swap! app-state assoc :patrimonio resposta :carregando? false))
+                :error-handler (fn [erro]
+                         (swap! app-state assoc :erro "Erro no patrimônio" :carregando? false))
+                :response-format :json
+                :keywords? true}
+  )
 )
 
 (defn ver-saldo [] 
@@ -111,4 +126,6 @@
   (extrato!)
   (ver-saldo)
   (valor-investido)
-  (lucro))
+  (lucro)
+  (patrimonio!)
+  )
