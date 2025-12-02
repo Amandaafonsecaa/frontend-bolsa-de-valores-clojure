@@ -28,7 +28,7 @@
 
    ;; Links de Navegação
    [:div {:style {:display "flex"}}
-    (nav-item "Dashboard" current-page)
+    (nav-item "Home" current-page)
     (nav-item "Quote Lookup" current-page)
     (nav-item "Transactions" current-page)
     (nav-item "Wallet Extract" current-page)]])

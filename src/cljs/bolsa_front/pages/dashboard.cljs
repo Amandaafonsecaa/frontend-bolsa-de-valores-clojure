@@ -61,13 +61,12 @@
         acoes (:acoes estado)
         saldo (:saldo estado)
         total-investido (:total-investido estado)
-        lucro-prejuizo (:lucro-prejuizo estado)
         carregando? (:carregando? estado)
         erro (:erro estado)
 
         patrimonio-liquido (+ saldo total-investido)
         percentual-lucro (if (pos? total-investido)
-                           (* 100 (/ lucro-prejuizo total-investido))
+                           (* 100 (/ saldo total-investido))
                            0)]
 
     [:div {:style {:color "white"}}
@@ -96,8 +95,8 @@
       ;; card do patrimônio líquido
       (metric-card "Net Worth (Patrimônio Líquido)"
                    patrimonio-liquido
-                   (str (if (pos? lucro-prejuizo) "↑" "↓")
-                        " R$ " (.toFixed lucro-prejuizo 2)
+                   (str (if (pos? saldo) "↑" "↓")
+                        " R$ " (.toFixed saldo 2)
                         " (" (.toFixed percentual-lucro 2) "%)"))
 
       ;; card do valor total investido
