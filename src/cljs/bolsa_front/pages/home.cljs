@@ -27,6 +27,23 @@
       (if (:carregando? estado) 
         "⏳ Buscando..." 
         "🔄 Testar Conexão Agora")]
+
+        [:div {:class "bg-background text-foreground p-4 rounded-lg"}
+ "Teste de cores do tema"]
+
+[:button.bg-primary.text-primary-foreground.px-4.py-2.rounded
+ "Botão Primary"]
+[:div {:class "p-6 rounded-lg bg-background text-foreground shadow-glow"}
+ [:h1.text-2xl.mb-4 "Teste do Tema 🎨"]
+ [:p "Se você ver o fundo na cor certa e o texto com contraste correto, o tema está OK!"]
+ [:div.flex.gap-4.mt-4
+  [:button {:class "px-4 py-2 rounded bg-primary text-primary-foreground"}
+   "Primary"]
+  [:button {:class "px-4 py-2 rounded bg-secondary text-secondary-foreground"}
+   "Secondary"]
+  [:button {:class "px-4 py-2 rounded bg-accent text-accent-foreground"}
+   "Accent"]]]
+
      
      ;; Debug: Se der erro, mostra aqui
      (when (:erro estado)

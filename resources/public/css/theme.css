@@ -1,0 +1,106 @@
+/* ==========================================================
+   🎨 DESIGN SYSTEM - THEME TOKENS (Light & Dark Mode)
+   Projeto: Bolsa de Valores
+   Usado com Tailwind + Reagent
+   ========================================================== */
+
+:root {
+    /* ====== Light Theme Colors ====== */
+
+    /* Background & Foreground */
+    --background: 210 30% 99%;
+    --foreground: 210 20% 10%;
+
+    /* Cards & Popovers */
+    --card: 210 25% 98%;
+    --popover: 210 30% 98%;
+
+    /* Primary */
+    --primary: 210 100% 50%;
+    --primary-foreground: 210 20% 98%;
+
+    /* Secondary */
+    --secondary: 210 20% 88%;
+    --secondary-foreground: 210 20% 10%;
+
+    /* Muted */
+    --muted: 210 20% 92%;
+    --muted-foreground: 210 15% 40%;
+
+    /* Accent */
+    --accent: 210 25% 85%;
+    --accent-foreground: 210 20% 10%;
+
+    /* Success */
+    --success: 145 70% 45%;
+    --success-foreground: 210 20% 98%;
+
+    /* Danger */
+    --danger: 0 72% 55%;
+    --danger-foreground: 210 20% 98%;
+
+    /* Borders & Inputs */
+    --border: 210 20% 80%;
+    --input: 210 20% 85%;
+    --ring: 210 100% 50%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(210 100% 50% / 0.1), hsl(210 100% 50% / 0.05));
+    --gradient-success: linear-gradient(135deg, hsl(145 70% 45% / 0.1), hsl(145 70% 45% / 0.05));
+    --gradient-danger: linear-gradient(135deg, hsl(0 72% 55% / 0.1), hsl(0 72% 55% / 0.05));
+
+    /* Effects */
+    --shadow-glow: 0 0 30px hsl(210 100% 50% / 0.15);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================================
+   DARK MODE (Tailwind ativa com class="dark")
+   ========================================================== */
+
+.dark {
+    /* Background & Foreground */
+    --background: 210 30% 8%;
+    --foreground: 210 20% 98%;
+
+    /* Cards & Popovers */
+    --card: 210 25% 12%;
+    --popover: 210 30% 10%;
+
+    /* Primary */
+    --primary: 210 100% 50%;
+    --primary-foreground: 210 20% 98%;
+
+    /* Secondary */
+    --secondary: 210 20% 18%;
+    --secondary-foreground: 210 20% 98%;
+
+    /* Muted */
+    --muted: 210 20% 16%;
+    --muted-foreground: 210 15% 65%;
+
+    /* Accent */
+    --accent: 210 25% 20%;
+    --accent-foreground: 210 20% 98%;
+
+    /* Success */
+    --success: 145 70% 45%;
+    --success-foreground: 210 20% 98%;
+
+    /* Danger */
+    --danger: 0 72% 55%;
+    --danger-foreground: 210 20% 98%;
+
+    /* Borders & Inputs */
+    --border: 210 20% 20%;
+    --input: 210 20% 20%;
+    --ring: 210 100% 50%;
+
+    /* Gradientes */
+    --gradient-primary: linear-gradient(135deg, hsl(210 100% 50% / 0.1), hsl(210 100% 50% / 0.05));
+    --gradient-success: linear-gradient(135deg, hsl(145 70% 45% / 0.1), hsl(145 70% 45% / 0.05));
+    --gradient-danger: linear-gradient(135deg, hsl(0 72% 55% / 0.1), hsl(0 72% 55% / 0.05));
+
+    /* Effects */
+    --shadow-glow: 0 0 30px hsl(210 100% 50% / 0.2);
+}
