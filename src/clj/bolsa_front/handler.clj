@@ -3,6 +3,7 @@
     [bolsa-front.middleware :as middleware]
     [bolsa-front.layout :refer [error-page]]
     [bolsa-front.routes.home :refer [home-routes]]
+   [bolsa-front.routes.carteira :refer [carteira-routes]]
     [reitit.ring :as ring]
     [ring.middleware.content-type :refer [wrap-content-type]]
     [ring.middleware.webjars :refer [wrap-webjars]]
@@ -22,7 +23,8 @@
   :start
   (ring/ring-handler
     (ring/router
-      [(home-routes)])
+      [(home-routes)
+       (carteira-routes)])
     (ring/routes
       (ring/create-resource-handler
         {:path "/"})

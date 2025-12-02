@@ -2,7 +2,7 @@
   (:require [reagent.core :as r]
             [ajax.core :refer [GET POST]]))
 
-(defonce app-state (r/atom {:acoes []          ;; Lista do extrato
+(defonce app-state (r/atom {:acoes []         
                             :saldo 0.0         
                             :total-investido 0.0
                             :lucro-prejuizo 0.0
@@ -11,7 +11,7 @@
 
 (def api-url "http://localhost:3000")
 
-;; Carteira 
+;; carteira
 (defn extrato! []
   (swap! app-state assoc :carregando? true :erro nil)
 
@@ -32,8 +32,8 @@
 
     (GET (str api-url "/carteira/saldo") 
        {:handler (fn [resposta]
-                   (js/console.log "Saldo:" resposta)
-                   (swap! app-state assoc :saldo resposta :carregando? false))
+                   (js/console.log "Saldo:" resposta) 
+                   (swap! app-state assoc :saldo (js/parseFloat resposta) :carregando? false))
         :error-handler (fn [erro]
                          (swap! app-state assoc :erro "Erro no saldo" :carregando? false))
         :response-format :json
@@ -45,8 +45,8 @@
 
     (GET (str api-url "/carteira/investido")
         {:handler (fn[resposta]
-                    (js/console.log "Valor investido:" resposta)
-                    (swap! app-state assoc :total-investido resposta :carregando? false))
+                    (js/console.log "Valor investido:" resposta) 
+                    (swap! app-state assoc :total-investido (js/parseFloat resposta) :carregando? false))
         :error-handler (fn [erro]
                          (swap! app-state assoc :erro "Erro no Valor investido" :carregando? false))
         :response-format :json
@@ -60,8 +60,8 @@
 
     (GET (str api-url "/carteira/lucro")
         {:handler (fn[resposta]
-                    (js/console.log "Lucro:" resposta)
-                    (swap! app-state assoc :lucro-prejuizo resposta :carregando? false))
+                    (js/console.log "Lucro:" resposta) 
+                    (swap! app-state assoc :lucro-prejuizo (js/parseFloat resposta) :carregando? false))
         :error-handler (fn [erro]
                          (swap! app-state assoc :erro "Erro no lucro" :carregando? false))
         :response-format :json
@@ -76,15 +76,13 @@
   (swap! app-state assoc :carregando? true)
   
   (POST (str api-url "/transacoes/compra")
-        {:params {:ticker ticker
-                  ;; MUDANÇA 2: Convertendo string "10" para número 10
+        {:params {:ticker ticker 
                   :quantidade (js/parseInt quantidade)}
          :format :json
          :response-format :json
          
          :handler (fn [resposta]
-                    (js/console.log "Compra realizada:" resposta)
-                    ;; MUDANÇA 3: Feedback visual pro usuário
+                    (js/console.log "Compra realizada:" resposta) 
                     (js/alert "Compra realizada com sucesso!")
                     (extrato!))
          
@@ -96,8 +94,7 @@
   (swap! app-state assoc :carregando? true)
   
   (POST (str api-url "/transacoes/venda")
-        {:params {:ticker ticker
-                  ;; MUDANÇA 2: Convertendo string para número aqui também
+        {:params {:ticker ticker 
                   :quantidade (js/parseInt quantidade)}
          :format :json 
          :response-format :json
