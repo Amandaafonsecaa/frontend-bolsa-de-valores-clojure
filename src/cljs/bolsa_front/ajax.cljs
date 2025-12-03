@@ -13,8 +13,6 @@
         (update :headers #(merge {"x-csrf-token" js/csrfToken} %)))
     request))
 
-;; injects transit serialization config into request options
-
 (defn as-transit [opts]
   (merge {:raw             false
           :format          :transit

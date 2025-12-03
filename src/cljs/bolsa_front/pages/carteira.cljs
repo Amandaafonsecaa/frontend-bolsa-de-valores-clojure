@@ -3,17 +3,26 @@
             [bolsa-front.layout :as layout]
             [bolsa-front.externals :as evt]))
 
-;; Estado local para filtros de data
 (defonce filtro-state (r/atom {:data-inicio ""
                                :data-fim ""
                                :transacoes []
                                :carregando? false}))
 
-;; Função para formatar data do formato ISO para dd/mm/yyyy
+(defn eh-compra? [tipo]
+  (if (nil? tipo)
+    false
+    (let [tipo-str (if (keyword? tipo) (name tipo) (str tipo))]
+      (= tipo-str "compra"))))
+
+(defn eh-venda? [tipo]
+  (if (nil? tipo)
+    false
+    (let [tipo-str (if (keyword? tipo) (name tipo) (str tipo))]
+      (= tipo-str "venda"))))
+
 (defn formatar-data [data-str]
   (if (and data-str (not= data-str ""))
     (try
-      ;; Tenta parsear como ISO (yyyy-mm-dd ou yyyy-mm-ddTHH:mm:ss)
       (let [data-iso (if (re-find #"T" data-str)
                       (subs data-str 0 (clojure.string/index-of data-str "T"))
                       data-str)
@@ -23,7 +32,6 @@
             dia (nth partes 2)]
         (str dia "/" mes "/" ano))
       (catch js/Error e
-        ;; Fallback: tenta usar Date
         (try
           (let [data (js/Date. data-str)
                 dia (.getDate data)
@@ -36,7 +44,6 @@
             data-str))))
     ""))
 
-;; Função para converter dd/mm/yyyy para formato ISO (yyyy-mm-dd)
 (defn converter-data-para-iso [data-str]
   (if (and data-str (not= data-str ""))
     (try
@@ -49,7 +56,6 @@
         data-str))
     nil))
 
-;; Função para buscar extrato filtrado
 (defn buscar-extrato-filtrado! []
   (swap! filtro-state assoc :carregando? true)
   (let [data-inicio (:data-inicio @filtro-state)
@@ -65,16 +71,14 @@
         (js/console.error "Erro ao buscar extrato:" erro)
         (swap! filtro-state assoc :carregando? false)))))
 
-;; Calcular totais
 (defn calcular-totais [transacoes]
   (let [total-transacoes (count transacoes)
-        total-comprado (reduce + 0 (map :total (filter #(= (:tipo %) :compra) transacoes)))
-        total-vendido (reduce + 0 (map :total (filter #(= (:tipo %) :venda) transacoes)))]
+        total-comprado (reduce + 0 (map :total (filter #(eh-compra? (:tipo %)) transacoes)))
+        total-vendido (reduce + 0 (map :total (filter #(eh-venda? (:tipo %)) transacoes)))]
     {:total-transacoes total-transacoes
      :total-comprado total-comprado
      :total-vendido total-vendido}))
 
-;; Componente de card de resumo
 (defn card-resumo [titulo valor cor icone]
   [:div {:style {:background-color "#2e2e2e"
                  :padding "20px"
@@ -98,7 +102,6 @@
         (str "R$ " (.toLocaleString (js/Number. valor) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2})))
       "R$ 0,00")]])
 
-;; Componente de filtro de data
 (defn filtro-data []
   [:div {:style {:background-color "#2e2e2e"
                  :padding "20px"
@@ -162,7 +165,6 @@
     [:span "🔍"]
     (if (:carregando? @filtro-state) "Filtrando..." "Filtrar")]])
 
-;; Componente de tabela de transações
 (defn tabela-transacoes [transacoes]
   [:div {:style {:background-color "#2e2e2e"
                  :padding "20px"
@@ -216,11 +218,12 @@
                       :color "#ccc"
                       :font-weight "500"}} "Total"]]]
       [:tbody
-       (for [transacao transacoes]
+       (for [[idx transacao] (map-indexed vector transacoes)]
          (let [tipo (:tipo transacao)
-               tipo-str (if (= tipo :compra) "COMPRA" "VENDA")
-               cor-tipo (if (= tipo :compra) "#4CAF50" "#f44336")]
-           [:tr {:key (str (:data transacao) "-" (:ticker transacao) "-" (:quantidade transacao))
+               compra? (eh-compra? tipo)
+               tipo-str (if compra? "COMPRA" "VENDA")
+               cor-tipo (if compra? "#4CAF50" "#f44336")]
+           [:tr {:key (str idx "-" (:data transacao) "-" (:ticker transacao) "-" (:quantidade transacao))
                  :style {:border-bottom "1px solid #3a3a3a"}}
             [:td {:style {:padding "12px 15px"}}
              (formatar-data (:data transacao))]
@@ -233,20 +236,22 @@
                             :font-weight "bold"}}
               tipo-str]]
             [:td {:style {:padding "12px 15px"}}
-             (:ticker transacao)]
+             (str (:ticker transacao))]
             [:td {:style {:padding "12px 15px"}}
-             (:quantidade transacao)]
+             (str (:quantidade transacao))]
             [:td {:style {:padding "12px 15px"}}
-             (str "R$ " (.toLocaleString (js/Number. (:preco transacao)) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2}))]
+             (if (:preco transacao)
+               (str "R$ " (.toLocaleString (js/Number. (:preco transacao)) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2}))
+               "R$ 0,00")]
             [:td {:style {:padding "12px 15px"}}
-             (str "R$ " (.toLocaleString (js/Number. (:total transacao)) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2}))]]))]])])
+             (if (:total transacao)
+               (str "R$ " (.toLocaleString (js/Number. (:total transacao)) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2}))
+               "R$ 0,00")]]))]])])
 
-;; Conteúdo principal da página
 (defn carteira-content []
   (let [transacoes (:transacoes @filtro-state)
         totais (calcular-totais transacoes)]
     
-    ;; Carregar extrato inicial quando o componente montar
     (r/create-class
      {:component-did-mount
       (fn []
@@ -255,12 +260,9 @@
       :reagent-render
       (fn []
         [:div {:style {:color "white" :padding-top "30px"}}
-         
-         ;; Título
          [:h1 {:style {:margin-bottom "30px"}}
           "Extrato da Carteira"]
          
-         ;; Cards de resumo
          [:div {:style {:display "flex"
                         :gap "20px"
                         :margin-bottom "30px"
@@ -278,20 +280,15 @@
                       "#f44336"
                       "📉")]
          
-         ;; Filtros de data
          [filtro-data]
-         
-         ;; Tabela de transações
          [tabela-transacoes transacoes]
          
-         ;; Mensagem de erro se houver
          (when (:erro @evt/app-state)
            [:p {:style {:color "#f44336"
                        :margin-top "20px"
                        :text-align "center"}}
             "❌ Erro: " (:erro @evt/app-state)])])})))
 
-;; Página principal
 (defn carteira-page []
   [layout/main-layout "Carteira" [carteira-content]])
 
