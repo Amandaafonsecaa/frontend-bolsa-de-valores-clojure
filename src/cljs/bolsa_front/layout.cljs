@@ -24,15 +24,15 @@
 
      ;; Logo
      [:div {:style {:flex-grow 1 :display "flex" :align-items "center"}}
-      [:h2 {:style {:font-size "24px" :color "white" :margin "0 10px 0 0"}} "🦁 Bolsa Front"]
-      [:p {:style {:color "#666" :font-size "14px" :margin 0}} "Gerenciador de Portfólio"]]
+      [:h2 {:style {:font-size "24px" :color "white" :margin "0 10px 0 0"}} "UniBolsa"]
+      ]
 
      ;; Links da Navegação
      ;; Sintaxe: (nav-item "Texto" :chave-que-o-core-usa pagina-atual "link-da-url")
      [:div {:style {:display "flex"}}
       (nav-item "Dashboard"  :home      page-atual "dashboard") ;; Use :home para bater com o core
-      (nav-item "Cotação"    :buysell   page-atual "cotacao")
-      (nav-item "Transações" :transacao page-atual "transacoes")
+      (nav-item "Transações"    :buysell   page-atual "cotacao")
+      (nav-item "Cotação" :cotacao page-atual "transacoes")
       (nav-item "Carteira"   :carteira  page-atual "carteira")]]))
 
 ;; Layout Principal
