@@ -13,8 +13,8 @@
     (case hash
       "#/carteira"   :carteira
       "#/dashboard"  :home
-      "#/buysell"    :buysell   ;; URL direta
-      "#/cotacao"    :buysell   ;; URL do botão (Redireciona para buysell)
+      "#/transacoes"    :buysell   ;; URL direta
+      "#/cotacao"    :cotacao   ;; URL do botão (Redireciona para buysell)
       :home)))                  ;; Padrão
 
 ;; --- 2. O ROTEADOR (Escolhe o componente) ---
