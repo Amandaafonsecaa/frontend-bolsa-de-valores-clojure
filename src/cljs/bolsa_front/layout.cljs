@@ -1,47 +1,47 @@
 (ns bolsa-front.layout
   (:require [reagent.core :as r]
-            [bolsa-front.state :as state]))
+            [bolsa-front.externals :as evt])) ;; <--- Usa o externals (Onde está o app-state)
 
-(defn nav-item [label current-page hash]
-  [:a {:href (str "#" hash)
-       :style {:color (if (= label current-page) "#007bff" "#ccc")
+(defn nav-item [label page-id current-page hash]
+  [:a {:href (str "#/" hash) 
+       :style {:color (if (= page-id current-page) "#007bff" "#ccc")
                :margin-right "25px"
                :padding-bottom "10px"
-               :border-bottom (if (= label current-page) "2px solid #007bff" "none")
+               :border-bottom (if (= page-id current-page) "2px solid #007bff" "2px solid transparent")
                :text-decoration "none"
                :font-weight "500"
                :cursor "pointer"}}
    label])
 
-(defn nav-bar [current-page]
-  (let [page-atual @state/current-page]
+(defn nav-bar [] 
+  (let [page-atual (:pagina-atual @evt/app-state)] 
     [:nav {:style {:background-color "#1e1e1e"
                    :padding "20px 40px"
                    :border-bottom "1px solid #3a3a3a"
                    :display "flex"
-                   :align-items "center"}}
+                   :align-items "center"
+                   :position "sticky" :top "0" :z-index "50"}}
 
-     ;; o logo/título
-     [:div {:style {:flex-grow 1
-                    :display "flex"
-                    :align-items "center"}}
-      [:h2 {:style {:font-size "24px" :color "white" :margin "0 10px 0 0"}} "Bolsa Front"]
-      [:p {:style {:color "#ccc" :font-size "14px" :margin 0}} "Gerenciador de Portfólio"]]
+     ;; Logo
+     [:div {:style {:flex-grow 1 :display "flex" :align-items "center"}}
+      [:h2 {:style {:font-size "24px" :color "white" :margin "0 10px 0 0"}} "🦁 Bolsa Front"]
+      [:p {:style {:color "#666" :font-size "14px" :margin 0}} "Gerenciador de Portfólio"]]
 
-     ;; os links da nav
+     ;; Links da Navegação
+     ;; Sintaxe: (nav-item "Texto" :chave-que-o-core-usa pagina-atual "link-da-url")
      [:div {:style {:display "flex"}}
-      (nav-item "Dashboard" page-atual "dashboard")
-      (nav-item "Cotação" page-atual "cotacao")
-      (nav-item "Transações" page-atual "transacoes")
-      (nav-item "Carteira" page-atual "carteira")]]))
+      (nav-item "Dashboard"  :home      page-atual "dashboard") ;; Use :home para bater com o core
+      (nav-item "Cotação"    :buysell   page-atual "cotacao")
+      (nav-item "Transações" :transacao page-atual "transacoes")
+      (nav-item "Carteira"   :carteira  page-atual "carteira")]]))
 
-;; layout principal que envolve qualquer página
-(defn main-layout [current-page content]
+;; Layout Principal
+(defn main-layout [titulo content] ;; Ajustei argumentos para bater com a chamada da pagina
   [:div {:style {:min-height "100vh"
-                 :background-color "#1e1e1e"
+                 :background-color "#121212"
                  :font-family "sans-serif"}}
-   [nav-bar current-page] 
+   [nav-bar] 
    [:div {:style {:max-width "1200px"
                   :margin "0 auto"
-                  :padding "0 20px"}}
+                  :padding "30px 20px"}}
     content]])

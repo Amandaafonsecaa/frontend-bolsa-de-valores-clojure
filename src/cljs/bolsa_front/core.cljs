@@ -1,37 +1,50 @@
 (ns bolsa-front.core
-  (:require [reagent.core :as r]
-            [reagent.dom :as d]
-            [bolsa-front.externals :as evt]
-            [bolsa-front.state :as state]        
+  (:require [reagent.dom :as d]
+            [bolsa-front.externals :as evt]        ;; O Cérebro (Estado Global)
+            
+            ;; IMPORTANTE: Seus imports de páginas
+            [bolsa-front.pages.buysell :as buysell]    
             [bolsa-front.pages.dashboard :as dashboard]
             [bolsa-front.pages.carteira :as carteira]))
 
+;; --- 1. TRADUTOR (Lê a URL e devolve a chave interna) ---
 (defn get-page-from-hash []
   (let [hash (-> js/window .-location .-hash)]
-    (cond
-      (or (= hash "") (= hash "#")) "Dashboard"
-      (= hash "#carteira") "Carteira"
-      (= hash "#dashboard") "Dashboard"
-      :else "Dashboard")))
+    (case hash
+      "#/carteira"   :carteira
+      "#/dashboard"  :home
+      "#/buysell"    :buysell   ;; URL direta
+      "#/cotacao"    :buysell   ;; URL do botão (Redireciona para buysell)
+      :home)))                  ;; Padrão
 
-
+;; --- 2. O ROTEADOR (Escolhe o componente) ---
 (defn current-page-component []
-  (case @state/current-page
-    "Carteira" [carteira/carteira-page]
-    "Dashboard" [dashboard/dashboard-page]
-    [dashboard/dashboard-page]))
+  (let [pagina (:pagina-atual @evt/app-state)]
+    (case pagina
+      :home     [dashboard/dashboard-page]
+      :carteira [carteira/carteira-page]
+      :buysell  [buysell/buysell-page] ;; <--- Chama a sua página nova!
+      
+      ;; Default
+      [dashboard/dashboard-page])))
 
+;; --- 3. OUVINTE (Monitora mudanças na URL) ---
 (defn on-hash-change []
-  (reset! state/current-page (get-page-from-hash)))
+  (let [nova-pagina (get-page-from-hash)]
+    (swap! evt/app-state assoc :pagina-atual nova-pagina)))
 
+;; --- INICIALIZAÇÃO ---
 (defn mount-root [] 
   (let [el (.getElementById js/document "app")]
     (d/render [current-page-component] el))) 
 
 (defn ^:export init []
   (js/console.log "Iniciando sistema...")
+  ;; Liga o ouvido para navegação
   (.addEventListener js/window "hashchange" on-hash-change)
-  (reset! state/current-page (get-page-from-hash))
-  (when (= @state/current-page "Dashboard")
-    (evt/atualizar-tudo!))
-  (mount-root))        
+  ;; Verifica onde estamos agora
+  (on-hash-change)
+  ;; Carrega dados
+  (evt/atualizar-tudo!)
+  ;; Desenha
+  (mount-root))
