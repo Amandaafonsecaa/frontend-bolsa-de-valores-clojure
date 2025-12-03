@@ -63,10 +63,21 @@
         total-investido (:total-investido estado)
         carregando? (:carregando? estado)
         erro (:erro estado)
+        patrimonio (:patrimonio estado) ;; Corrigi o espaço que faltava aqui
 
-        patrimonio-liquido (+ saldo total-investido)
-        percentual-lucro (if (pos? total-investido)
-                           (* 100 (/ saldo total-investido))
+        ;; --- 🕵️‍♂️ ÁREA DE INVESTIGAÇÃO (DEBUG) ---
+        _ (js/console.log "🔍 DEBUG VARIAVEIS:"
+                          "\nSaldo:" saldo "Tipo:" (type saldo)
+                          "\nInvestido:" total-investido "Tipo:" (type total-investido)
+                          "\nPatrimonio Back:" patrimonio "Tipo:" (type patrimonio))
+        ;; ----------------------------------------
+
+        ;; Cálculo Protegido (Garante que são números antes de somar)
+        patrimonio-liquido (+ (if (number? saldo) saldo 0) 
+                              (if (number? total-investido) total-investido 0))
+        
+        percentual-lucro (if (and (number? total-investido) (pos? total-investido))
+                           (* 100 (/ (if (number? saldo) saldo 0) total-investido))
                            0)]
 
     [:div {:style {:color "white"}}

@@ -12,6 +12,34 @@
 
 (def api-url "http://localhost:3000")
 
+(defn extrair-numero [nome-campo resposta chaves-tentativa]
+  (js/console.log (str "🔍 DEBUG " nome-campo ":") resposta)
+  
+  (cond
+    ;; 1. Se já é número, perfeito
+    (number? resposta) resposta
+    
+    ;; 2. Se é texto, converte
+    (string? resposta) (js/parseFloat resposta)
+    
+    ;; 3. Se é Mapa (O caso do seu log!)
+    (map? resposta) (let [valor-pela-chave (some #(get resposta %) chaves-tentativa)
+                          ;; PLANO B: Se não achar a chave, pega o primeiro valor que tiver dentro!
+                          valor-bruto (-> resposta vals first)]
+                      
+                      (cond
+                        (number? valor-pela-chave) valor-pela-chave
+                        (number? valor-bruto) valor-bruto
+                        :else 0.0))
+    
+    ;; 4. Se é vetor/lista (raro, mas acontece)
+    (vector? resposta) (let [primeiro (first resposta)]
+                         (if (map? primeiro)
+                           (or (some #(get primeiro %) chaves-tentativa) 0.0)
+                           0.0))
+                           
+    :else 0.0))
+
 ;; carteira
 (defn extrato! []
   (swap! app-state assoc :carregando? true :erro nil)
@@ -28,19 +56,16 @@
 
 )
 
-(defn patrimonio! []
-  (swap! app-state assoc :carregando? true :erro nil)
 
+(defn patrimonio! []
   (GET (str api-url "/carteira/patrimonio")
     {:handler (fn[resposta]
-                (js/console.log "Patrimônio:" resposta)
-                (swap! app-state assoc :patrimonio resposta :carregando? false))
-                :error-handler (fn [erro]
-                         (swap! app-state assoc :erro "Erro no patrimônio" :carregando? false))
-                :response-format :json
-                :keywords? true}
-  )
-)
+                ;; CORREÇÃO: Adicionei :patrimonio_liquido que vimos no log
+                (let [valor (extrair-numero "PATRIMONIO" resposta [:patrimonio_liquido :patrimonio :valor])]
+                  (swap! app-state assoc :patrimonio valor :carregando? false)))
+     :error-handler (fn [erro] (swap! app-state assoc :erro "Erro patrimonio" :carregando? false))
+     :response-format :json :keywords? true}))
+
 
 (defn ver-saldo [] 
    (swap! app-state assoc :carregando? true)
@@ -70,7 +95,7 @@
     )
 )
 
-(defn lucro[]
+#_ (defn lucro[]
     (swap! app-state assoc :carregando? true)
 
     (GET (str api-url "/carteira/lucro")
@@ -126,6 +151,6 @@
   (extrato!)
   (ver-saldo)
   (valor-investido)
-  (lucro)
+  ; (lucro)
   (patrimonio!)
   )
