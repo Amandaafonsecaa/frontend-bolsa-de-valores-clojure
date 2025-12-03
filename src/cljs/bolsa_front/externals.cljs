@@ -16,15 +16,11 @@
   (js/console.log (str "🔍 DEBUG " nome-campo ":") resposta)
   
   (cond
-    ;; 1. Se já é número, perfeito
     (number? resposta) resposta
     
-    ;; 2. Se é texto, converte
     (string? resposta) (js/parseFloat resposta)
     
-    ;; 3. Se é Mapa (O caso do seu log!)
     (map? resposta) (let [valor-pela-chave (some #(get resposta %) chaves-tentativa)
-                          ;; PLANO B: Se não achar a chave, pega o primeiro valor que tiver dentro!
                           valor-bruto (-> resposta vals first)]
                       
                       (cond
@@ -32,7 +28,6 @@
                         (number? valor-bruto) valor-bruto
                         :else 0.0))
     
-    ;; 4. Se é vetor/lista (raro, mas acontece)
     (vector? resposta) (let [primeiro (first resposta)]
                          (if (map? primeiro)
                            (or (some #(get primeiro %) chaves-tentativa) 0.0)
@@ -56,11 +51,31 @@
 
 )
 
+;; busca o extrato filtrado por data
+(defn extrato-filtrado! [params success-callback error-callback]
+  (let [query-string (->> params
+                         (filter (fn [[_ v]] (some? v)))
+                         (map (fn [[k v]] (str (name k) "=" v)))
+                         (clojure.string/join "&"))
+        url (if (empty? query-string)
+              (str api-url "/carteira/extrato")
+              (str api-url "/carteira/extrato?" query-string))]
+    (GET url
+      {:handler (fn [resposta]
+                  (js/console.log "Extrato filtrado:" resposta)
+                  (success-callback resposta))
+       :error-handler (fn [erro]
+                        (js/console.error "Erro ao buscar extrato filtrado:" erro)
+                        (if error-callback
+                          (error-callback erro)
+                          (swap! app-state assoc :erro "Erro ao buscar extrato filtrado" :carregando? false)))
+       :response-format :json
+       :keywords? true})))
+
 
 (defn patrimonio! []
   (GET (str api-url "/carteira/patrimonio")
     {:handler (fn[resposta]
-                ;; CORREÇÃO: Adicionei :patrimonio_liquido que vimos no log
                 (let [valor (extrair-numero "PATRIMONIO" resposta [:patrimonio_liquido :patrimonio :valor])]
                   (swap! app-state assoc :patrimonio valor :carregando? false)))
      :error-handler (fn [erro] (swap! app-state assoc :erro "Erro patrimonio" :carregando? false))
@@ -86,7 +101,8 @@
     (GET (str api-url "/carteira/investido")
         {:handler (fn[resposta]
                     (js/console.log "Valor investido:" resposta) 
-                    (swap! app-state assoc :total-investido (js/parseFloat resposta) :carregando? false))
+                    (let [valor (extrair-numero "VALOR_INVESTIDO" resposta [:valor_total_investido :valor :total])]
+                      (swap! app-state assoc :total-investido valor :carregando? false)))
         :error-handler (fn [erro]
                          (swap! app-state assoc :erro "Erro no Valor investido" :carregando? false))
         :response-format :json
@@ -110,7 +126,7 @@
     )
 )
 
-;; Transacoes 
+;; transacoes 
 
 (defn comprar-acao! [ticker quantidade]
   (swap! app-state assoc :carregando? true)
@@ -149,8 +165,6 @@
                           (swap! app-state assoc :erro "Falha na Venda." :carregando? false))}))
 (defn atualizar-tudo! []
   (extrato!)
-  (ver-saldo)
   (valor-investido)
-  ; (lucro)
   (patrimonio!)
   )

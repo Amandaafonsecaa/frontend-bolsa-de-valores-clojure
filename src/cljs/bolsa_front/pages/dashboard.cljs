@@ -13,7 +13,9 @@
    [:div {:style {:font-size "14px" :color "#ccc" :margin-bottom "10px"}}
     title]
    [:div {:style {:font-size "32px" :font-weight "bold" :margin-bottom "5px"}}
-    (str "R$ " (.toFixed value 2))]
+    (if (number? value)
+      (str "R$ " (.toLocaleString (js/Number. value) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2}))
+      "R$ 0,00")]
    (when subtitle
      [:div {:style {:font-size "12px" :color "#4CAF50"}}
       subtitle])])
@@ -59,25 +61,25 @@
   ;; estado atual
   (let [estado @evt/app-state
         acoes (:acoes estado)
-        saldo (:saldo estado)
         total-investido (:total-investido estado)
         carregando? (:carregando? estado)
         erro (:erro estado)
-        patrimonio (:patrimonio estado) ;; Corrigi o espaço que faltava aqui
+        patrimonio (:patrimonio estado) ;; Patrimônio líquido vem diretamente do backend
 
         ;; --- 🕵️‍♂️ ÁREA DE INVESTIGAÇÃO (DEBUG) ---
         _ (js/console.log "🔍 DEBUG VARIAVEIS:"
-                          "\nSaldo:" saldo "Tipo:" (type saldo)
                           "\nInvestido:" total-investido "Tipo:" (type total-investido)
                           "\nPatrimonio Back:" patrimonio "Tipo:" (type patrimonio))
         ;; ----------------------------------------
 
-        ;; Cálculo Protegido (Garante que são números antes de somar)
-        patrimonio-liquido (+ (if (number? saldo) saldo 0) 
-                              (if (number? total-investido) total-investido 0))
+        ;; Garantir que os valores são números
+        patrimonio-liquido (if (number? patrimonio) patrimonio 0)
+        total-investido-num (if (number? total-investido) total-investido 0)
         
-        percentual-lucro (if (and (number? total-investido) (pos? total-investido))
-                           (* 100 (/ (if (number? saldo) saldo 0) total-investido))
+        ;; Calcular percentual de lucro/prejuízo
+        lucro-prejuizo (- patrimonio-liquido total-investido-num)
+        percentual-lucro (if (and (number? total-investido-num) (pos? total-investido-num))
+                           (* 100 (/ lucro-prejuizo total-investido-num))
                            0)]
 
     [:div {:style {:color "white"}}
@@ -106,13 +108,13 @@
       ;; card do patrimônio líquido
       (metric-card "Net Worth (Patrimônio Líquido)"
                    patrimonio-liquido
-                   (str (if (pos? saldo) "↑" "↓")
-                        " R$ " (.toFixed saldo 2)
+                   (str (if (pos? lucro-prejuizo) "↑" "↓")
+                        " R$ " (.toLocaleString (js/Number. (Math/abs lucro-prejuizo)) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2})
                         " (" (.toFixed percentual-lucro 2) "%)"))
 
       ;; card do valor total investido
       (metric-card "Total Invested (Valor Total Investido)"
-                   total-investido
+                   total-investido-num
                    nil)]
      ;; tabela das posições atuais
      (holdings-table acoes)

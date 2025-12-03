@@ -1,8 +1,9 @@
 (ns bolsa-front.layout
-  (:require [reagent.core :as r]))
+  (:require [reagent.core :as r]
+            [bolsa-front.state :as state]))
 
-(defn nav-item [label current-page]
-  [:a {:href "#"
+(defn nav-item [label current-page hash]
+  [:a {:href (str "#" hash)
        :style {:color (if (= label current-page) "#007bff" "#ccc")
                :margin-right "25px"
                :padding-bottom "10px"
@@ -13,27 +14,28 @@
    label])
 
 (defn nav-bar [current-page]
-  [:nav {:style {:background-color "#1e1e1e"
-                 :padding "20px 40px"
-                 :border-bottom "1px solid #3a3a3a"
-                 :display "flex"
-                 :align-items "center"}}
+  (let [page-atual @state/current-page]
+    [:nav {:style {:background-color "#1e1e1e"
+                   :padding "20px 40px"
+                   :border-bottom "1px solid #3a3a3a"
+                   :display "flex"
+                   :align-items "center"}}
 
-   ;; Logo/Título
-   [:div {:style {:flex-grow 1
-                  :display "flex"
-                  :align-items "center"}}
-    [:h2 {:style {:font-size "24px" :color "white" :margin "0 10px 0 0"}} "Bolsa Front"]
-    [:p {:style {:color "#ccc" :font-size "14px" :margin 0}} "Portfolio Manager"]]
+     ;; o logo/título
+     [:div {:style {:flex-grow 1
+                    :display "flex"
+                    :align-items "center"}}
+      [:h2 {:style {:font-size "24px" :color "white" :margin "0 10px 0 0"}} "Bolsa Front"]
+      [:p {:style {:color "#ccc" :font-size "14px" :margin 0}} "Gerenciador de Portfólio"]]
 
-   ;; Links de Navegação
-   [:div {:style {:display "flex"}}
-    (nav-item "Home" current-page)
-    (nav-item "Quote Lookup" current-page)
-    (nav-item "Transactions" current-page)
-    (nav-item "Wallet Extract" current-page)]])
+     ;; os links da nav
+     [:div {:style {:display "flex"}}
+      (nav-item "Dashboard" page-atual "dashboard")
+      (nav-item "Cotação" page-atual "cotacao")
+      (nav-item "Transações" page-atual "transacoes")
+      (nav-item "Carteira" page-atual "carteira")]]))
 
-;; Layout Principal que envolve qualquer página
+;; layout principal que envolve qualquer página
 (defn main-layout [current-page content]
   [:div {:style {:min-height "100vh"
                  :background-color "#1e1e1e"
