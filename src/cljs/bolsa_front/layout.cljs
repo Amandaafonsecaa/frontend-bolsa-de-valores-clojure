@@ -23,7 +23,7 @@
                    :position "sticky" :top "0" :z-index "50"}}
 
      [:div {:style {:flex-grow 1 :display "flex" :align-items "center"}}
-      [:h2 {:style {:font-size "24px" :color "white" :margin "0 10px 0 0"}} "🦁 BolsaFácil"]]
+      [:h2 {:style {:font-size "24px" :color "white" :margin "0 10px 0 0"}} "BolsaFácil"]]
 
      [:div {:style {:display "flex"}}
       (nav-item "Dashboard"  :home      page-atual "dashboard")
