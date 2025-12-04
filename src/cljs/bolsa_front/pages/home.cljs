@@ -1,24 +1,16 @@
 (ns bolsa-front.pages.home
-  (:require [bolsa-front.externals :as evt])) ;; Importa a lógica
+  (:require [bolsa-front.externals :as evt]))
 
 (defn home-page []
-  ;; 1. Pega o estado atual (o "ouvido" do Reagent)
   (let [estado @evt/app-state]
-    
     [:div {:style {:padding "50px" :text-align "center" :font-family "sans-serif"}}
-     
-     ;; Título
      [:h1 "🧪 Teste de Conexão"]
-     
-     ;; Mostrador de Saldo (Vem do Backend)
      [:div {:style {:margin "20px" :font-size "24px"}}
       [:strong "Saldo Atual: "]
       [:span {:style {:color "blue"}} 
        (str "R$ " (:saldo estado))]]
-
-     ;; Botão de Teste
      [:button {:on-click evt/atualizar-tudo!
-               :style {:background-color "#4CAF50" ;; Verde
+               :style {:background-color "#4CAF50"
                        :color "white"
                        :padding "15px 32px"
                        :font-size "16px"
@@ -27,25 +19,20 @@
       (if (:carregando? estado) 
         "⏳ Buscando..." 
         "🔄 Testar Conexão Agora")]
-
-        [:div {:class "bg-background text-foreground p-4 rounded-lg"}
- "Teste de cores do tema"]
-
-[:button.bg-primary.text-primary-foreground.px-4.py-2.rounded
- "Botão Primary"]
-[:div {:class "p-6 rounded-lg bg-background text-foreground shadow-glow"}
- [:h1.text-2xl.mb-4 "Teste do Tema 🎨"]
- [:p "Se você ver o fundo na cor certa e o texto com contraste correto, o tema está OK!"]
- [:div.flex.gap-4.mt-4
-  [:button {:class "px-4 py-2 rounded bg-primary text-primary-foreground"}
-   "Primary"]
-  [:button {:class "px-4 py-2 rounded bg-secondary text-secondary-foreground"}
-   "Secondary"]
-  [:button {:class "px-4 py-2 rounded bg-accent text-accent-foreground"}
-   "Accent"]]]
-
-     
-     ;; Debug: Se der erro, mostra aqui
+     [:div {:class "bg-background text-foreground p-4 rounded-lg"}
+      "Teste de cores do tema"]
+     [:button.bg-primary.text-primary-foreground.px-4.py-2.rounded
+      "Botão Primary"]
+     [:div {:class "p-6 rounded-lg bg-background text-foreground shadow-glow"}
+      [:h1.text-2xl.mb-4 "Teste do Tema 🎨"]
+      [:p "Se você ver o fundo na cor certa e o texto com contraste correto, o tema está OK!"]
+      [:div.flex.gap-4.mt-4
+       [:button {:class "px-4 py-2 rounded bg-primary text-primary-foreground"}
+        "Primary"]
+       [:button {:class "px-4 py-2 rounded bg-secondary text-secondary-foreground"}
+        "Secondary"]
+       [:button {:class "px-4 py-2 rounded bg-accent text-accent-foreground"}
+        "Accent"]]]
      (when (:erro estado)
        [:p {:style {:color "red" :margin-top "20px"}} 
         "❌ Erro: " (:erro estado)])]))

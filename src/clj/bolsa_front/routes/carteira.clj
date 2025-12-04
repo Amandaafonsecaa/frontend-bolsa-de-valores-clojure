@@ -1,7 +1,6 @@
 (ns bolsa-front.routes.carteira
   (:require [ring.util.http-response :as response]))
 
-;; Dados simulados da carteira para teste
 (def carteira-data
   {:saldo 25450.75
    :total-investido 100000.00
@@ -16,20 +15,17 @@
   (response/ok (:extrato carteira-data)))
 
 (defn saldo-handler [_]
-  ;; O AJAX no frontend espera um valor simples (número), não um mapa
   (response/ok (:saldo carteira-data)))
 
 (defn investido-handler [_]
-  ;; O AJAX no frontend espera um valor simples (número)
   (response/ok (:total-investido carteira-data)))
 
 (defn lucro-handler [_]
-  ;; O AJAX no frontend espera um valor simples (número)
   (response/ok (:lucro-prejuizo carteira-data)))
 
 (defn carteira-routes []
   ["/carteira"
-   ;; Rotas da carteira (API)
+   ;; rotas
    ["/extrato" {:get extrato-handler}]
    ["/saldo" {:get saldo-handler}]
    ["/investido" {:get investido-handler}]

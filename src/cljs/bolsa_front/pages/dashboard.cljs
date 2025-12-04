@@ -29,69 +29,66 @@
                     :text-align "left"
                     :border-bottom "2px solid #3a3a3a"}} col])]])
 
-;; Componente para o corpo da tabela de ativos
-(defn holdings-table [holdings]
-  [:div {:style {:background-color "#2e2e2e"
-                 :padding "20px"
-                 :border-radius "8px"
-                 :margin-top "30px"
-                 :box-shadow "0 4px 8px rgba(0, 0, 0, 0.2)"
-                 :color "white"}}
-   [:h3 {:style {:margin-top "0" :border-bottom "1px solid #3a3a3a" :padding-bottom "15px"}}
-    "Current Holdings (Saldo por Ativo)"]
+(defn holdings-table [saldo-por-ativo]
+  (let [holdings-list (if (map? saldo-por-ativo)
+                        (->> saldo-por-ativo
+                             (filter (fn [[ticker qtd]] 
+                                      (and ticker 
+                                           qtd 
+                                           (number? qtd) 
+                                           (pos? qtd))))
+                             (map (fn [[ticker qtd]] {:ticker (str ticker) :quantidade qtd}))
+                             (filter (fn [acao] (and (:ticker acao) (not (empty? (:ticker acao)))))))
+                        [])]
+    [:div {:style {:background-color "#2e2e2e"
+                   :padding "20px"
+                   :border-radius "8px"
+                   :margin-top "30px"
+                   :box-shadow "0 4px 8px rgba(0, 0, 0, 0.2)"
+                   :color "white"}}
+     [:h3 {:style {:margin-top "0" :border-bottom "1px solid #3a3a3a" :padding-bottom "15px"}}
+      "Saldo por Ativo"]
 
-   [:table {:style {:width "100%" :border-collapse "collapse"}}
+     [:table {:style {:width "100%" :border-collapse "collapse"}}
 
-    (table-header ["Ticker Symbol" "Quantity"])
+      (table-header ["Ticker Symbol" "Quantity"])
 
-    [:tbody
-     (if (empty? holdings)
-       [:tr
-        [:td {:col-span 2 :style {:padding "15px" :text-align "center" :color "#ccc"}}
-         "Nenhum ativo encontrado no extrato."]]
-       (for [acao holdings]
-         [:tr {:key (:ticker acao)} ;; Chave única para cada linha
-          [:td {:style {:padding "12px 15px" :border-bottom "1px solid #3a3a3a"}}
-           (:ticker acao)]
-          [:td {:style {:padding "12px 15px" :border-bottom "1px solid #3a3a3a"}}
-           (:quantidade acao)]]))]]])
+      [:tbody
+       (if (empty? holdings-list)
+         [:tr {:key "empty"}
+          [:td {:col-span 2 :style {:padding "15px" :text-align "center" :color "#ccc"}}
+           "Nenhum ativo encontrado na carteira."]]
+         (doall (for [[idx acao] (map-indexed vector holdings-list)]
+                  (let [ticker (:ticker acao)
+                        quantidade (:quantidade acao)]
+                    [:tr {:key (str "holding-" idx "-" ticker)}
+                     [:td {:style {:padding "12px 15px" :border-bottom "1px solid #3a3a3a"}}
+                      ticker]
+                     [:td {:style {:padding "12px 15px" :border-bottom "1px solid #3a3a3a"}}
+                      (str quantidade)]]))))]]]))
 
 
 (defn dashboard-content []
-  ;; estado atual
   (let [estado @evt/app-state
-        acoes (:acoes estado)
+        saldo-por-ativo (:saldo-por-ativo estado)
         total-investido (:total-investido estado)
         carregando? (:carregando? estado)
         erro (:erro estado)
-        patrimonio (:patrimonio estado) ;; Patrimônio líquido vem diretamente do backend
-
-        ;; --- 🕵️‍♂️ ÁREA DE INVESTIGAÇÃO (DEBUG) ---
-        _ (js/console.log "🔍 DEBUG VARIAVEIS:"
-                          "\nInvestido:" total-investido "Tipo:" (type total-investido)
-                          "\nPatrimonio Back:" patrimonio "Tipo:" (type patrimonio))
-        ;; ----------------------------------------
-
-        ;; Garantir que os valores são números
+        patrimonio (:patrimonio estado)
         patrimonio-liquido (if (number? patrimonio) patrimonio 0)
         total-investido-num (if (number? total-investido) total-investido 0)
-        
-        ;; Calcular percentual de lucro/prejuízo
         lucro-prejuizo (- patrimonio-liquido total-investido-num)
         percentual-lucro (if (and (number? total-investido-num) (pos? total-investido-num))
                            (* 100 (/ lucro-prejuizo total-investido-num))
                            0)]
 
     [:div {:style {:color "white"}}
-
-     ;; titulo principal e botão de refresh
      [:div {:style {:display "flex"
                     :justify-content "space-between"
                     :align-items "center"
                     :margin-bottom "30px"
                     :margin-top "30px"}}
       [:h1 "Dashboard"]
-
       [:button {:on-click evt/atualizar-tudo!
                 :disabled carregando?
                 :style {:background-color "#007bff"
@@ -102,22 +99,16 @@
                         :cursor "pointer"
                         :font-weight "bold"}}
        (if carregando? "⏳ Carregando..." "🔄 Refresh Data")]]
-
-     ;; cards de métricas
      [:div {:style {:display "flex" :gap "20px" :margin-bottom "30px" :flex-wrap "wrap"}}
-      ;; card do patrimônio líquido
       (metric-card "Net Worth (Patrimônio Líquido)"
                    patrimonio-liquido
                    (str (if (pos? lucro-prejuizo) "↑" "↓")
                         " R$ " (.toLocaleString (js/Number. (Math/abs lucro-prejuizo)) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2})
                         " (" (.toFixed percentual-lucro 2) "%)"))
-
-      ;; card do valor total investido
       (metric-card "Total Invested (Valor Total Investido)"
                    total-investido-num
                    nil)]
-     ;; tabela das posições atuais
-     (holdings-table acoes)
+     (holdings-table saldo-por-ativo)
 
      (when erro
        [:p {:style {:color "red" :margin-top "20px" :text-align "center"}}
@@ -129,5 +120,4 @@
 
 
 (defn dashboard-page []
-  ;; a página é envolvida pelo layout principal, passando o conteúdo
   [layout/main-layout "Dashboard" [dashboard-content]])

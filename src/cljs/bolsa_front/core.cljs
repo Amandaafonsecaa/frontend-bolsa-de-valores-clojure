@@ -1,51 +1,50 @@
 (ns bolsa-front.core
-  (:require [reagent.dom :as d]
-            [bolsa-front.externals :as evt]        ;; O Cérebro (Estado Global)
-            
-            ;; IMPORTANTE: Seus imports de páginas
-            [bolsa-front.pages.buysell :as buysell]    
+  (:require [reagent.core :as r]
+            [reagent.dom :as d]
+            [bolsa-front.externals :as evt]
+            [bolsa-front.state :as state]        
             [bolsa-front.pages.dashboard :as dashboard]
+<<<<<<< HEAD
             [bolsa-front.pages.cotacao :as cotacao]
             [bolsa-front.pages.carteira :as carteira]))
+=======
+            [bolsa-front.pages.carteira :as carteira]
+            [bolsa-front.pages.buysell :as buysell]))
+>>>>>>> b30b7cdb1ed8108d2b67a9b074570d26096d3836
 
-;; --- 1. TRADUTOR (Lê a URL e devolve a chave interna) ---
 (defn get-page-from-hash []
   (let [hash (-> js/window .-location .-hash)]
     (case hash
-      "#/carteira"   :carteira
-      "#/dashboard"  :home
-      "#/transacoes"    :buysell   ;; URL direta
-      "#/cotacao"    :cotacao   ;; URL do botão (Redireciona para buysell)
-      :home)))                  ;; Padrão
+      "#/carteira" :carteira
+      "#carteira" :carteira
+      "#/dashboard" :home
+      "#dashboard" :home
+      "#/transacoes" :buysell
+      "#/cotacao" :cotacao
+      "" :home
+      "#" :home
+      :home)))
 
-;; --- 2. O ROTEADOR (Escolhe o componente) ---
 (defn current-page-component []
-  (let [pagina (:pagina-atual @evt/app-state)]
-    (case pagina
-      :home     [dashboard/dashboard-page]
+  (let [current @state/current-page]
+    (case current
       :carteira [carteira/carteira-page]
       :buysell  [buysell/buysell-page] ;; <--- Chama a sua página nova!
       :cotacao  [cotacao/cotacao-page]
       ;; Default
       [dashboard/dashboard-page])))
 
-;; --- 3. OUVINTE (Monitora mudanças na URL) ---
 (defn on-hash-change []
-  (let [nova-pagina (get-page-from-hash)]
-    (swap! evt/app-state assoc :pagina-atual nova-pagina)))
+  (reset! state/current-page (get-page-from-hash)))
 
-;; --- INICIALIZAÇÃO ---
 (defn mount-root [] 
   (let [el (.getElementById js/document "app")]
     (d/render [current-page-component] el))) 
 
 (defn ^:export init []
   (js/console.log "Iniciando sistema...")
-  ;; Liga o ouvido para navegação
   (.addEventListener js/window "hashchange" on-hash-change)
-  ;; Verifica onde estamos agora
-  (on-hash-change)
-  ;; Carrega dados
-  (evt/atualizar-tudo!)
-  ;; Desenha
-  (mount-root))
+  (reset! state/current-page (get-page-from-hash))
+  (when (= @state/current-page :home)
+    (evt/atualizar-tudo!))
+  (mount-root))        

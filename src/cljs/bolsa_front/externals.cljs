@@ -3,7 +3,7 @@
             [ajax.core :refer [GET POST]]))
 
 (defonce app-state (r/atom {:acoes []         
-                            :saldo 0.0         
+                            :saldo-por-ativo {}         
                             :total-investido 0.0
                             :lucro-prejuizo 0.0
                             :patrimonio 0.0
@@ -17,25 +17,19 @@
   
   (cond
     (number? resposta) resposta
-    
     (string? resposta) (js/parseFloat resposta)
-    
     (map? resposta) (let [valor-pela-chave (some #(get resposta %) chaves-tentativa)
                           valor-bruto (-> resposta vals first)]
-                      
                       (cond
                         (number? valor-pela-chave) valor-pela-chave
                         (number? valor-bruto) valor-bruto
                         :else 0.0))
-    
     (vector? resposta) (let [primeiro (first resposta)]
                          (if (map? primeiro)
                            (or (some #(get primeiro %) chaves-tentativa) 0.0)
                            0.0))
-                           
     :else 0.0))
 
-;; carteira
 (defn extrato! []
   (swap! app-state assoc :carregando? true :erro nil)
 
@@ -51,7 +45,6 @@
 
 )
 
-;; busca o extrato filtrado por data
 (defn extrato-filtrado! [params success-callback error-callback]
   (let [query-string (->> params
                          (filter (fn [[_ v]] (some? v)))
@@ -82,15 +75,16 @@
      :response-format :json :keywords? true}))
 
 
-(defn ver-saldo [] 
+(defn saldo-por-ativo! [] 
    (swap! app-state assoc :carregando? true)
 
     (GET (str api-url "/carteira/saldo") 
        {:handler (fn [resposta]
-                   (js/console.log "Saldo:" resposta) 
-                   (swap! app-state assoc :saldo (js/parseFloat resposta) :carregando? false))
+                   (js/console.log "Saldo por ativo (Dashboard):" resposta)
+                   (swap! app-state assoc :saldo-por-ativo (if (map? resposta) resposta {}) :carregando? false))
         :error-handler (fn [erro]
-                         (swap! app-state assoc :erro "Erro no saldo" :carregando? false))
+                         (js/console.error "Erro no saldo por ativo:" erro)
+                         (swap! app-state assoc :erro "Erro no saldo por ativo" :carregando? false))
         :response-format :json
         :keywords? true})
 )
@@ -111,60 +105,92 @@
     )
 )
 
-#_ (defn lucro[]
-    (swap! app-state assoc :carregando? true)
-
-    (GET (str api-url "/carteira/lucro")
-        {:handler (fn[resposta]
-                    (js/console.log "Lucro:" resposta) 
-                    (swap! app-state assoc :lucro-prejuizo (js/parseFloat resposta) :carregando? false))
-        :error-handler (fn [erro]
-                         (swap! app-state assoc :erro "Erro no lucro" :carregando? false))
-        :response-format :json
-        :keywords? true
-        }
-    )
-)
-
-;; transacoes 
+(defn gerar-data-iso []
+  (let [data (js/Date.)
+        ano (.getFullYear data)
+        mes (-> (.getMonth data) inc)
+        dia (.getDate data)
+        horas (.getHours data)
+        minutos (.getMinutes data)
+        segundos (.getSeconds data)
+        pad-zero (fn [n] (if (< n 10) (str "0" n) (str n)))]
+    (str ano "-"
+         (pad-zero mes) "-"
+         (pad-zero dia) "T"
+         (pad-zero horas) ":"
+         (pad-zero minutos) ":"
+         (pad-zero segundos))))
 
 (defn comprar-acao! [ticker quantidade]
-  (swap! app-state assoc :carregando? true)
+  (swap! app-state assoc :carregando? true :erro nil)
   
-  (POST (str api-url "/transacoes/compra")
-        {:params {:ticker ticker 
-                  :quantidade (js/parseInt quantidade)}
-         :format :json
-         :response-format :json
-         
-         :handler (fn [resposta]
-                    (js/console.log "Compra realizada:" resposta) 
-                    (js/alert "Compra realizada com sucesso!")
-                    (extrato!))
-         
-         :error-handler (fn [erro]
-                          (js/console.error "Erro na Compra:" erro)
-                          (swap! app-state assoc :erro "Falha na compra." :carregando? false))}))
+  (let [data-iso (gerar-data-iso)
+        quantidade-num (js/parseInt quantidade)
+        params {:ticker (str ticker)
+                :quantidade quantidade-num
+                :data data-iso}]
+    (js/console.log "Enviando compra - Parâmetros:" params)
+    (js/console.log "Data gerada:" data-iso)
+    (POST (str api-url "/transacoes/compra")
+          {:params params
+           :format :json
+           :response-format :json
+           
+           :handler (fn [resposta]
+                      (js/console.log "Compra realizada:" resposta) 
+                      (js/alert "Compra realizada com sucesso!")
+                      (swap! app-state assoc :carregando? false)
+                      (extrato!)
+                      (saldo-por-ativo!)
+                      (valor-investido)
+                      (patrimonio!))
+           
+           :error-handler (fn [erro]
+                            (js/console.error "Erro completo na Compra:" erro)
+                            (let [response-data (-> erro :response)
+                                  erro-msg (or (:erro response-data)
+                                              (:detalhe response-data)
+                                              (-> erro :status-text)
+                                              "Erro desconhecido")]
+                              (swap! app-state assoc :erro erro-msg :carregando? false)
+                              (js/alert (str "Erro na compra: " erro-msg))))})))
 
 (defn vender-acao! [ticker quantidade]
-  (swap! app-state assoc :carregando? true)
+  (swap! app-state assoc :carregando? true :erro nil)
   
-  (POST (str api-url "/transacoes/venda")
-        {:params {:ticker ticker 
-                  :quantidade (js/parseInt quantidade)}
-         :format :json 
-         :response-format :json
-         
-         :handler (fn [resposta]
-                    (js/console.log "Venda realizada:" resposta)
-                    (js/alert "Venda realizada com sucesso!")
-                    (extrato!))
-         
-         :error-handler (fn [erro]
-                          (js/console.error "Erro na Venda:" erro)
-                          (swap! app-state assoc :erro "Falha na Venda." :carregando? false))}))
+  (let [data-iso (gerar-data-iso)
+        quantidade-num (js/parseInt quantidade)
+        params {:ticker (str ticker)
+                :quantidade quantidade-num
+                :data data-iso}]
+    (js/console.log "Enviando venda - Parâmetros:" params)
+    (js/console.log "Data gerada:" data-iso)
+    (POST (str api-url "/transacoes/venda")
+          {:params params
+           :format :json 
+           :response-format :json
+           
+           :handler (fn [resposta]
+                      (js/console.log "Venda realizada:" resposta)
+                      (js/alert "Venda realizada com sucesso!")
+                      (swap! app-state assoc :carregando? false)
+                      (extrato!)
+                      (saldo-por-ativo!)
+                      (valor-investido)
+                      (patrimonio!))
+           
+           :error-handler (fn [erro]
+                            (js/console.error "Erro completo na Venda:" erro)
+                            (let [response-data (-> erro :response)
+                                  erro-msg (or (:erro response-data)
+                                              (:detalhe response-data)
+                                              (-> erro :status-text)
+                                              "Erro desconhecido")]
+                              (swap! app-state assoc :erro erro-msg :carregando? false)
+                              (js/alert (str "Erro na venda: " erro-msg))))})))
 (defn atualizar-tudo! []
   (extrato!)
+  (saldo-por-ativo!)
   (valor-investido)
   (patrimonio!)
   )
