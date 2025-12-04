@@ -79,26 +79,27 @@
                    :max-width "700px"
                    :width "100%"
                    :text-align "center"}}
-     
+
      ;; Ticker Header
-     [:div {:style {:font-size "36px" 
-                    :font-weight "bold" 
+     [:div {:style {:font-size "36px"
+                    :font-weight "bold"
                     :margin-bottom "5px"
                     :color "white"}}
       (:nome-curto data)]
 
      ;; Subtitulo (Nome Longo)
-     [:div {:style {:font-size "14px" 
-                    :color "#ccc" 
+     [:div {:style {:font-size "14px"
+                    :color "#ccc"
                     :margin-bottom "20px"}}
       (:nome data)]
 
      ;; Divisor
-     [:div {:style {:border-bottom "1px solid #3a3a3a" :margin-bottom "20px"}}]
+     [:div {:style {:border-bottom "1px solid #3a3a3a"
+                    :margin-bottom "20px"}}]
 
      ;; Preço Principal
-     [:div {:style {:font-size "48px" 
-                    :font-weight "bold" 
+     [:div {:style {:font-size "48px"
+                    :font-weight "bold"
                     :margin-bottom "10px"}}
       (format-money preco)]
 
@@ -106,7 +107,8 @@
      [:div {:style {:display "inline-block"
                     :padding "8px 16px"
                     :border-radius "4px"
-                    :background-color (if positivo? "rgba(76, 175, 80, 0.1)" "rgba(239, 68, 68, 0.1)")
+                    :background-color (if positivo? "rgba(76, 175, 80, 0.1)"
+                                          "rgba(239, 68, 68, 0.1)")
                     :color cor-variacao
                     :font-weight "bold"
                     :font-size "18px"
@@ -121,26 +123,58 @@
                     :gap "15px"
                     :margin-top "10px"
                     :text-align "left"}}
-      [:div
-       [:div {:style {:font-size "12px" :color "#aaa" :text-transform "uppercase" :margin-bottom "4px"}} "Abertura"]
-       [:div {:style {:font-size "16px" :font-weight "bold"}} (format-money abertura)]]
 
+      ;; Abertura
       [:div
-       [:div {:style {:font-size "12px" :color "#aaa" :text-transform "uppercase" :margin-bottom "4px"}} "Máximo"]
-       [:div {:style {:font-size "16px" :font-weight "bold"}} (format-money maximo)]]
+       [:div {:style {:font-size "12px"
+                      :color "#aaa"
+                      :text-transform "uppercase"
+                      :margin-bottom "4px"}} "Abertura"]
+       [:div {:style {:font-size "16px"
+                      :font-weight "bold"}}
+        (format-money abertura)]]
 
+      ;; Máximo
       [:div
-       [:div {:style {:font-size "12px" :color "#aaa" :text-transform "uppercase" :margin-bottom "4px"}} "Mínimo"]
-       [:div {:style {:font-size "16px" :font-weight "bold"}} (format-money minimo)]]
+       [:div {:style {:font-size "12px"
+                      :color "#aaa"
+                      :text-transform "uppercase"
+                      :margin-bottom "4px"}} "Máximo"]
+       [:div {:style {:font-size "16px"
+                      :font-weight "bold"}}
+        (format-money maximo)]]
 
+      ;; Mínimo
       [:div
-       [:div {:style {:font-size "12px" :color "#aaa" :text-transform "uppercase" :margin-bottom "4px"}} "Fechamento"]
-       [:div {:style {:font-size "16px" :font-weight "bold"}} (format-money fechamento)]]
+       [:div {:style {:font-size "12px"
+                      :color "#aaa"
+                      :text-transform "uppercase"
+                      :margin-bottom "4px"}} "Mínimo"]
+       [:div {:style {:font-size "16px"
+                      :font-weight "bold"}}
+        (format-money minimo)]]
 
+      ;; Fechamento
       [:div
-       [:div {:style {:font-size "12px" :color "#aaa" :text-transform "uppercase" :margin-bottom "4px"}} "Hora"]
-       [:div {:style {:font-size "16px" :font-weight "bold"}}
-        (or hora "-")]]]))
+       [:div {:style {:font-size "12px"
+                      :color "#aaa"
+                      :text-transform "uppercase"
+                      :margin-bottom "4px"}} "Fechamento"]
+       [:div {:style {:font-size "16px"
+                      :font-weight "bold"}}
+        (format-money fechamento)]]
+
+      ;; Hora
+      [:div
+       [:div {:style {:font-size "12px"
+                      :color "#aaa"
+                      :text-transform "uppercase"
+                      :margin-bottom "4px"}} "Hora"]
+       [:div {:style {:font-size "16px"
+                      :font-weight "bold"}}
+        (if (and hora (not= hora ""))
+          hora
+          "-")]]]]))
 
 (defn cotacao-content []
   (let [termo-local (r/atom "")]
