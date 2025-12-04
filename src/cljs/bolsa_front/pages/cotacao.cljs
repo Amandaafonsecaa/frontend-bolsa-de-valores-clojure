@@ -57,13 +57,23 @@
                      :font-size "14px"}}
     "CONSULTAR"]])
 
+(defn extrair-hora [iso-str]
+  (when (and iso-str (not= iso-str ""))
+    (let [s (str iso-str)]
+      (if (or (str/includes? s "T") (str/includes? s " "))
+        (let [[_ time-part] (if (str/includes? s "T")
+                              (str/split s #"T")
+                              (str/split s #" "))]
+          (subs time-part 0 8))
+        s))))
+
 (defn result-card [data]
   (let [preco (:ultimo-preco data)
         abertura (:preco-abertura data)
         maximo (:preco-maximo data)
         minimo (:preco-minimo data)
         fechamento (:preco-fechamento data)
-        hora (:hora data)
+        hora (extrair-hora (:hora-cotacao data))
         variacao (if (and preco fechamento (not= fechamento 0))
                    (* (/ (- preco fechamento) fechamento) 100)
                    0.0)
