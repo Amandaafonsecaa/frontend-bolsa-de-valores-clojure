@@ -7,6 +7,7 @@
                             :total-investido 0.0
                             :lucro-prejuizo 0.0
                             :patrimonio 0.0
+                            :cotacao-atual nil
                             :carregando? false
                             :erro nil}))
 
@@ -42,7 +43,6 @@
                 :response-format :json
                 :keywords? true}
   )
-
 )
 
 (defn extrato-filtrado! [params success-callback error-callback]
@@ -188,6 +188,26 @@
                                               "Erro desconhecido")]
                               (swap! app-state assoc :erro erro-msg :carregando? false)
                               (js/alert (str "Erro na venda: " erro-msg))))})))
+
+(defn buscar-acao! [ticker]
+  (swap! app-state assoc :carregando? true :erro nil :cotacao-busca nil)
+
+  (GET (str api-url "/cotacao/" ticker)
+    {:handler (fn [resposta]
+                (js/console.log "🔍 Resultado da busca:" resposta)
+                (swap! app-state assoc :cotacao-busca resposta :carregando? false))
+     
+     :error-handler (fn [erro]
+                      (js/console.error "Erro na busca:" erro)
+                      (let [response-data (:response erro)
+                            msg (or (:erro response-data) 
+                                    (:message response-data) 
+                                    (str "Erro: " (:status-text erro)))]
+                        (swap! app-state assoc :erro msg :carregando? false)))
+     
+     :response-format :json
+     :keywords? true}))
+
 (defn atualizar-tudo! []
   (extrato!)
   (saldo-por-ativo!)

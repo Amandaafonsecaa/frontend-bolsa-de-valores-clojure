@@ -51,7 +51,7 @@
 
      [:table {:style {:width "100%" :border-collapse "collapse"}}
 
-      (table-header ["Ticker Symbol" "Quantity"])
+      (table-header ["Símbolo da Ação" "Quantidade"])
 
       [:tbody
        (if (empty? holdings-list)
@@ -98,14 +98,14 @@
                         :border-radius "4px"
                         :cursor "pointer"
                         :font-weight "bold"}}
-       (if carregando? "⏳ Carregando..." "🔄 Refresh Data")]]
+       (if carregando? "Carregando..." " Recarregar Dados")]]
      [:div {:style {:display "flex" :gap "20px" :margin-bottom "30px" :flex-wrap "wrap"}}
-      (metric-card "Net Worth (Patrimônio Líquido)"
+      (metric-card "Patrimônio Líquido"
                    patrimonio-liquido
                    (str (if (pos? lucro-prejuizo) "↑" "↓")
                         " R$ " (.toLocaleString (js/Number. (Math/abs lucro-prejuizo)) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2})
                         " (" (.toFixed percentual-lucro 2) "%)"))
-      (metric-card "Total Invested (Valor Total Investido)"
+      (metric-card "Valor Total Investido"
                    total-investido-num
                    nil)]
      (holdings-table saldo-por-ativo)

@@ -259,8 +259,10 @@
       
       :reagent-render
       (fn []
-        [:div {:style {:color "white" :padding-top "30px"}}
-         [:h1 {:style {:margin-bottom "30px"}}
+        [:div {:style {:color "white" :padding-top "30px" :display "flex"
+                       :flex-direction "column" }}
+         [:h1 {:style {:margin "20px" :font-weight "800"
+                       :font-size "24px" :text-align "center"}}
           "Extrato da Carteira"]
          
          [:div {:style {:display "flex"
