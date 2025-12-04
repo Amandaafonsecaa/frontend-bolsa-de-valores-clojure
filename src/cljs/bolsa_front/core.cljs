@@ -5,6 +5,7 @@
             ;; IMPORTANTE: Seus imports de páginas
             [bolsa-front.pages.buysell :as buysell]    
             [bolsa-front.pages.dashboard :as dashboard]
+            [bolsa-front.pages.cotacao :as cotacao]
             [bolsa-front.pages.carteira :as carteira]))
 
 ;; --- 1. TRADUTOR (Lê a URL e devolve a chave interna) ---
@@ -24,7 +25,7 @@
       :home     [dashboard/dashboard-page]
       :carteira [carteira/carteira-page]
       :buysell  [buysell/buysell-page] ;; <--- Chama a sua página nova!
-      
+      :cotacao  [cotacao/cotacao-page]
       ;; Default
       [dashboard/dashboard-page])))
 
