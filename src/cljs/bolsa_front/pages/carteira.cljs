@@ -45,19 +45,29 @@
             data-str))))
     ""))
 
-(defn converter-data-para-iso [data-str]
-  (if (and data-str (not= data-str ""))
+(defn normalizar-data-para-iso [data-str]
+  (when (and data-str (not= data-str ""))
     (try
-      (if (re-find #"^\d{4}-\d{2}-\d{2}$" data-str)
+      (cond
+        ;; já está no formato yyyy-MM-dd
+        (re-find #"^\d{4}-\d{2}-\d{2}$" data-str)
         data-str
+
+        ;; formato dd/MM/yyyy digitado manualmente
+        (re-find #"^\d{2}/\d{2}/\d{4}$" data-str)
         (let [partes (clojure.string/split data-str #"/")
               dia (nth partes 0)
               mes (nth partes 1)
               ano (nth partes 2)]
-          (str ano "-" mes "-" dia)))
+          (str ano "-" mes "-" dia))
+
+        :else
+        data-str)
       (catch js/Error e
-        data-str))
-    nil))
+        data-str))))
+
+(defn converter-data-para-iso [data-str]
+  (normalizar-data-para-iso data-str))
 
 (defn converter-data-iso-para-input [data-iso]
   (if (and data-iso (not= data-iso ""))
@@ -113,19 +123,26 @@
 
 (defn buscar-extrato-filtrado! []
   (swap! filtro-state assoc :carregando? true)
-  (let [data-inicio (:data-inicio @filtro-state)
-        data-fim (:data-fim @filtro-state)
+  (let [data-inicio-str (:data-inicio @filtro-state)
+        data-fim-str (:data-fim @filtro-state)
+        data-inicio-iso (normalizar-data-para-iso data-inicio-str)
+        data-fim-iso (normalizar-data-para-iso data-fim-str)
+        inicio-localdatetime (when data-inicio-iso
+                               (str data-inicio-iso "T00:00:00"))
+        fim-localdatetime (when data-fim-iso
+                            (str data-fim-iso "T23:59:59"))
         params (cond-> {}
-                 (not= data-inicio "") (assoc :data_inicio (converter-data-para-iso data-inicio))
-                 (not= data-fim "") (assoc :data_fim (converter-data-para-iso data-fim)))]
-    (js/console.log "🔍 Buscando extrato com filtros - Data início:" data-inicio "Data fim:" data-fim)
+                 inicio-localdatetime (assoc :data_inicio inicio-localdatetime)
+                 fim-localdatetime (assoc :data_fim fim-localdatetime))]
+    (js/console.log "🔍 Buscando extrato com filtros - Data início (input):" data-inicio-str "Data fim (input):" data-fim-str)
+    (js/console.log "🔍 Datas normalizadas - início:" data-inicio-iso "fim:" data-fim-iso)
     (js/console.log "🔍 Parâmetros enviados ao backend:" params)
     (evt/extrato-filtrado! params
       (fn [transacoes]
         (let [transacoes-recebidas (if (or (nil? transacoes) (not (sequential? transacoes)))
                                      []
                                      transacoes)
-              transacoes-filtradas (filtrar-transacoes-por-data transacoes-recebidas data-inicio data-fim)]
+              transacoes-filtradas (filtrar-transacoes-por-data transacoes-recebidas data-inicio-str data-fim-str)]
           (js/console.log "📥 Transações recebidas do backend (total):" (count transacoes-recebidas))
           (js/console.log "📋 Datas das transações recebidas:" (map #(:data %) transacoes-recebidas))
           (js/console.log "✅ Transações após filtro de data no frontend (total):" (count transacoes-filtradas))
@@ -337,7 +354,7 @@
             [:td {:style {:padding "12px 15px"}}
              (if (:total transacao)
                (str "R$ " (.toLocaleString (js/Number. (:total transacao)) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2}))
-               "R$ 0,00")]]))]])])))
+               "R$ 0,00")]]))]])]))
 
 (defn carteira-content []
   (let [transacoes (:transacoes @filtro-state)

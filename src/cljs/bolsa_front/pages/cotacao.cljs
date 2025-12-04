@@ -59,7 +59,11 @@
 
 (defn result-card [data]
   (let [preco (:ultimo-preco data)
+        abertura (:preco-abertura data)
+        maximo (:preco-maximo data)
+        minimo (:preco-minimo data)
         fechamento (:preco-fechamento data)
+        hora (:hora data)
         variacao (if (and preco fechamento (not= fechamento 0))
                    (* (/ (- preco fechamento) fechamento) 100)
                    0.0)
@@ -72,7 +76,7 @@
                    :box-shadow "0 4px 8px rgba(0, 0, 0, 0.2)"
                    :color "white"
                    :margin-top "20px"
-                   :max-width "600px"
+                   :max-width "700px"
                    :width "100%"
                    :text-align "center"}}
      
@@ -105,8 +109,38 @@
                     :background-color (if positivo? "rgba(76, 175, 80, 0.1)" "rgba(239, 68, 68, 0.1)")
                     :color cor-variacao
                     :font-weight "bold"
-                    :font-size "18px"}}
-      (str (if positivo? "▲ " "▼ ") (.toFixed (Math/abs variacao) 2) "%")]]))
+                    :font-size "18px"
+                    :margin-bottom "20px"}}
+      (str (if positivo? "▲ " "▼ ")
+           (.toFixed (js/Math.abs variacao) 2)
+           "%")]
+
+     ;; Linha de detalhes (Abertura, Máximo, Mínimo, Fechamento, Hora)
+     [:div {:style {:display "grid"
+                    :grid-template-columns "repeat(auto-fit, minmax(120px, 1fr))"
+                    :gap "15px"
+                    :margin-top "10px"
+                    :text-align "left"}}
+      [:div
+       [:div {:style {:font-size "12px" :color "#aaa" :text-transform "uppercase" :margin-bottom "4px"}} "Abertura"]
+       [:div {:style {:font-size "16px" :font-weight "bold"}} (format-money abertura)]]
+
+      [:div
+       [:div {:style {:font-size "12px" :color "#aaa" :text-transform "uppercase" :margin-bottom "4px"}} "Máximo"]
+       [:div {:style {:font-size "16px" :font-weight "bold"}} (format-money maximo)]]
+
+      [:div
+       [:div {:style {:font-size "12px" :color "#aaa" :text-transform "uppercase" :margin-bottom "4px"}} "Mínimo"]
+       [:div {:style {:font-size "16px" :font-weight "bold"}} (format-money minimo)]]
+
+      [:div
+       [:div {:style {:font-size "12px" :color "#aaa" :text-transform "uppercase" :margin-bottom "4px"}} "Fechamento"]
+       [:div {:style {:font-size "16px" :font-weight "bold"}} (format-money fechamento)]]
+
+      [:div
+       [:div {:style {:font-size "12px" :color "#aaa" :text-transform "uppercase" :margin-bottom "4px"}} "Hora"]
+       [:div {:style {:font-size "16px" :font-weight "bold"}}
+        (or hora "-")]]]))
 
 (defn cotacao-content []
   (let [termo-local (r/atom "")]

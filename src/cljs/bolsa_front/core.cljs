@@ -17,6 +17,7 @@
       "#dashboard" :home
       "#/transacoes" :buysell
       "#/cotacao" :cotacao
+      "#cotacao" :cotacao
       "" :home
       "#" :home
       :home)))
