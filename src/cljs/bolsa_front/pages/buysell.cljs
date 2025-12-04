@@ -27,10 +27,9 @@
           hoje-date (js/Date. hoje-ano (dec hoje-mes) hoje-dia)
           data-date (js/Date. data-ano (dec data-mes) data-dia)
           diff-dias (/ (- (.getTime data-date) (.getTime hoje-date)) (* 1000 60 60 24))]
-      (cond
-        (< diff-dias 0) {:valida? false :mensagem "A data não pode ser no passado"}
-        (> diff-dias 0) {:valida? false :mensagem "A data não pode ser no futuro"}
-        :else {:valida? true :mensagem nil}))))
+      (if (> diff-dias 0)
+        {:valida? false :mensagem "A data não pode ser no futuro"}
+        {:valida? true :mensagem nil}))))
 
 (defn card [tipo]
      (let [state (r/atom {:ticker "" :quantidade "" :data (obter-data-hoje)})
@@ -109,12 +108,12 @@
         [:input {:type "date"
                  :value (:data @state)
                  :max (obter-data-hoje)
-                 :min (obter-data-hoje)
                  :on-change (fn [e]
                              (let [nova-data (-> e .-target .-value)
                                    validacao (validar-data nova-data)]
                                (swap! state assoc :data nova-data)
-                               (reset! erro-data (if (:valida? validacao) nil (:mensagem validacao)))))
+                               (reset! erro-data (when (not (:valida? validacao))
+                                                   (:mensagem validacao)))))
                  :style {:width "100%"
                          :padding "12px 16px"
                          :background-color "#181818"

@@ -172,9 +172,7 @@
                       :margin-bottom "4px"}} "Hora"]
        [:div {:style {:font-size "16px"
                       :font-weight "bold"}}
-        (if (and hora (not= hora ""))
-          hora
-          "-")]]]]))
+        (or hora "-")]]]]))
 
 (defn cotacao-content []
   (let [termo-local (r/atom "")]
