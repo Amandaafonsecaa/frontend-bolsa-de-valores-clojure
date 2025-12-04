@@ -1,6 +1,7 @@
 (ns bolsa-front.externals
   (:require [reagent.core :as r]
-            [ajax.core :refer [GET POST]]))
+            [ajax.core :refer [GET POST]]
+            [clojure.string]))
 
 (defonce app-state (r/atom {:acoes []         
                             :saldo-por-ativo {}         
@@ -121,12 +122,32 @@
          (pad-zero minutos) ":"
          (pad-zero segundos))))
 
-(defn comprar-acao! [ticker quantidade]
+(defn converter-data-input-para-iso [data-str]
+  (if (and data-str (not= data-str ""))
+    (let [partes (clojure.string/split data-str #"-")
+          ano (js/parseInt (nth partes 0))
+          mes (js/parseInt (nth partes 1))
+          dia (js/parseInt (nth partes 2))
+          agora (js/Date.)
+          horas (.getHours agora)
+          minutos (.getMinutes agora)
+          segundos (.getSeconds agora)
+          pad-zero (fn [n] (if (< n 10) (str "0" n) (str n)))]
+      (str ano "-"
+           (pad-zero mes) "-"
+           (pad-zero dia) "T"
+           (pad-zero horas) ":"
+           (pad-zero minutos) ":"
+           (pad-zero segundos)))
+    (gerar-data-iso)))
+
+(defn comprar-acao! [ticker quantidade data]
   (swap! app-state assoc :carregando? true :erro nil)
   
-  (let [data-iso (gerar-data-iso)
+  (let [data-iso (converter-data-input-para-iso data)
         quantidade-num (js/parseInt quantidade)
-        params {:ticker (str ticker)
+        ticker-str (str ticker)
+        params {:ticker ticker-str
                 :quantidade quantidade-num
                 :data data-iso}]
     (js/console.log "Enviando compra - Parâmetros:" params)
@@ -147,18 +168,40 @@
            
            :error-handler (fn [erro]
                             (js/console.error "Erro completo na Compra:" erro)
+                            (js/console.error "Status:" (-> erro :status))
                             (let [response-data (-> erro :response)
-                                  erro-msg (or (:erro response-data)
-                                              (:detalhe response-data)
-                                              (-> erro :status-text)
-                                              "Erro desconhecido")]
-                              (swap! app-state assoc :erro erro-msg :carregando? false)
-                              (js/alert (str "Erro na compra: " erro-msg))))})))
+                                  arr-data (-> response-data :arr)]
+                              (js/console.error "Response keys:" (js/Object.keys response-data))
+                              (js/console.error "Response body:" (:body response-data))
+                              (js/console.error "Response arr:" arr-data)
+                              (when arr-data
+                                (js/console.error "Response arr length:" (.-length arr-data))
+                                (js/console.error "Response arr[0]:" (aget arr-data 0))
+                                (js/console.error "Response arr[1]:" (aget arr-data 1))
+                                (js/console.error "Response arr[2]:" (aget arr-data 2))
+                                (js/console.error "Response arr[3]:" (aget arr-data 3)))
+                              (js/console.error "Response completo:" response-data)
+                              (let [response-body (or (:body response-data) 
+                                                      (when (-> response-data :arr)
+                                                        (first (-> response-data :arr)))
+                                                      response-data)
+                                    erro-msg (or (when (map? response-body) (:erro response-body))
+                                                (when (map? response-body) (:detalhe response-body))
+                                                (when (map? response-body) (:message response-body))
+                                                (when (map? response-data) (:erro response-data))
+                                                (when (map? response-data) (:detalhe response-data))
+                                                (when (map? response-data) (:message response-data))
+                                                (when (string? response-body) response-body)
+                                                (-> erro :status-text)
+                                                (str "Erro ao processar compra do ticker " ticker-str ". O servidor não conseguiu buscar a cotação deste ativo. Verifique se o ticker está correto e se o serviço de cotação está funcionando."))]
+                                (js/console.error "Mensagem de erro extraída:" erro-msg)
+                                (swap! app-state assoc :erro erro-msg :carregando? false)
+                                (js/alert (str "Erro na compra de " ticker-str ": " erro-msg)))))})))
 
-(defn vender-acao! [ticker quantidade]
+(defn vender-acao! [ticker quantidade data]
   (swap! app-state assoc :carregando? true :erro nil)
   
-  (let [data-iso (gerar-data-iso)
+  (let [data-iso (converter-data-input-para-iso data)
         quantidade-num (js/parseInt quantidade)
         params {:ticker (str ticker)
                 :quantidade quantidade-num
