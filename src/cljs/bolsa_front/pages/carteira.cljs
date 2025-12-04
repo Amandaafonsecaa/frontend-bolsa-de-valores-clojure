@@ -1,7 +1,8 @@
 (ns bolsa-front.pages.carteira
   (:require [reagent.core :as r]
             [bolsa-front.layout :as layout]
-            [bolsa-front.externals :as evt]))
+            [bolsa-front.externals :as evt]
+            [clojure.string]))
 
 (defonce filtro-state (r/atom {:data-inicio ""
                                :data-fim ""
@@ -47,14 +48,68 @@
 (defn converter-data-para-iso [data-str]
   (if (and data-str (not= data-str ""))
     (try
-      (let [partes (clojure.string/split data-str #"/")
-            dia (nth partes 0)
-            mes (nth partes 1)
-            ano (nth partes 2)]
-        (str ano "-" mes "-" dia))
+      (if (re-find #"^\d{4}-\d{2}-\d{2}$" data-str)
+        data-str
+        (let [partes (clojure.string/split data-str #"/")
+              dia (nth partes 0)
+              mes (nth partes 1)
+              ano (nth partes 2)]
+          (str ano "-" mes "-" dia)))
       (catch js/Error e
         data-str))
     nil))
+
+(defn converter-data-iso-para-input [data-iso]
+  (if (and data-iso (not= data-iso ""))
+    (try
+      (if (re-find #"^\d{4}-\d{2}-\d{2}$" data-iso)
+        data-iso
+        (let [partes (clojure.string/split data-iso #"/")
+              dia (nth partes 0)
+              mes (nth partes 1)
+              ano (nth partes 2)]
+          (str ano "-" mes "-" dia)))
+      (catch js/Error e
+        data-iso))
+    ""))
+
+(defn extrair-data-sem-hora [data-completa]
+  (if (and data-completa (not= data-completa ""))
+    (try
+      (let [data-str (str data-completa)
+            pos-t (clojure.string/index-of data-str "T")]
+        (if pos-t
+          (subs data-str 0 pos-t)
+          (if (re-find #"^\d{4}-\d{2}-\d{2}" data-str)
+            (subs data-str 0 10)
+            data-str)))
+      (catch js/Error e
+        (str data-completa)))
+    ""))
+
+(defn data-no-periodo? [data-transacao data-inicio data-fim]
+  (let [data-transacao-iso (extrair-data-sem-hora data-transacao)
+        data-inicio-iso (if (and data-inicio (not= data-inicio "")) (converter-data-para-iso data-inicio) nil)
+        data-fim-iso (if (and data-fim (not= data-fim "")) (converter-data-para-iso data-fim) nil)]
+    (cond
+      (or (nil? data-transacao-iso) (= data-transacao-iso "")) false
+      (and (nil? data-inicio-iso) (nil? data-fim-iso)) true
+      (and data-inicio-iso data-fim-iso)
+      (and (>= (compare data-transacao-iso data-inicio-iso) 0)
+           (<= (compare data-transacao-iso data-fim-iso) 0))
+      data-inicio-iso (>= (compare data-transacao-iso data-inicio-iso) 0)
+      data-fim-iso (<= (compare data-transacao-iso data-fim-iso) 0)
+      :else true)))
+
+(defn filtrar-transacoes-por-data [transacoes data-inicio data-fim]
+  (if (or (nil? transacoes) (not (sequential? transacoes)))
+    []
+    (if (and (or (nil? data-inicio) (= data-inicio ""))
+             (or (nil? data-fim) (= data-fim "")))
+      transacoes
+      (filter (fn [transacao]
+                (data-no-periodo? (:data transacao) data-inicio data-fim))
+              transacoes))))
 
 (defn buscar-extrato-filtrado! []
   (swap! filtro-state assoc :carregando? true)
@@ -63,18 +118,34 @@
         params (cond-> {}
                  (not= data-inicio "") (assoc :data_inicio (converter-data-para-iso data-inicio))
                  (not= data-fim "") (assoc :data_fim (converter-data-para-iso data-fim)))]
-    
+    (js/console.log "🔍 Buscando extrato com filtros - Data início:" data-inicio "Data fim:" data-fim)
+    (js/console.log "🔍 Parâmetros enviados ao backend:" params)
     (evt/extrato-filtrado! params
       (fn [transacoes]
-        (swap! filtro-state assoc :transacoes transacoes :carregando? false))
+        (let [transacoes-recebidas (if (or (nil? transacoes) (not (sequential? transacoes)))
+                                     []
+                                     transacoes)
+              transacoes-filtradas (filtrar-transacoes-por-data transacoes-recebidas data-inicio data-fim)]
+          (js/console.log "📥 Transações recebidas do backend (total):" (count transacoes-recebidas))
+          (js/console.log "📋 Datas das transações recebidas:" (map #(:data %) transacoes-recebidas))
+          (js/console.log "✅ Transações após filtro de data no frontend (total):" (count transacoes-filtradas))
+          (js/console.log "📋 Datas das transações filtradas:" (map #(:data %) transacoes-filtradas))
+          (swap! filtro-state assoc :transacoes transacoes-filtradas :carregando? false)))
       (fn [erro]
         (js/console.error "Erro ao buscar extrato:" erro)
-        (swap! filtro-state assoc :carregando? false)))))
+        (swap! filtro-state assoc :transacoes [] :carregando? false)))))
 
 (defn calcular-totais [transacoes]
-  (let [total-transacoes (count transacoes)
-        total-comprado (reduce + 0 (map :total (filter #(eh-compra? (:tipo %)) transacoes)))
-        total-vendido (reduce + 0 (map :total (filter #(eh-venda? (:tipo %)) transacoes)))]
+  (let [transacoes-validas (if (or (nil? transacoes) (not (sequential? transacoes)))
+                             []
+                             transacoes)
+        total-transacoes (count transacoes-validas)
+        total-comprado (if (empty? transacoes-validas)
+                         0.0
+                         (reduce + 0.0 (map #(or (:total %) 0.0) (filter #(eh-compra? (:tipo %)) transacoes-validas))))
+        total-vendido (if (empty? transacoes-validas)
+                        0.0
+                        (reduce + 0.0 (map #(or (:total %) 0.0) (filter #(eh-venda? (:tipo %)) transacoes-validas))))]
     {:total-transacoes total-transacoes
      :total-comprado total-comprado
      :total-vendido total-vendido}))
@@ -117,8 +188,7 @@
                      :margin-bottom "5px"
                      :font-size "14px"}}
      "Data Inicial"]
-    [:input {:type "text"
-             :placeholder "dd/mm/yyyy"
+    [:input {:type "date"
              :value (:data-inicio @filtro-state)
              :on-change (fn [e]
                          (swap! filtro-state assoc :data-inicio (-> e .-target .-value)))
@@ -136,8 +206,7 @@
                      :margin-bottom "5px"
                      :font-size "14px"}}
      "Data Final"]
-    [:input {:type "text"
-             :placeholder "dd/mm/yyyy"
+    [:input {:type "date"
              :value (:data-fim @filtro-state)
              :on-change (fn [e]
                          (swap! filtro-state assoc :data-fim (-> e .-target .-value)))
@@ -163,26 +232,48 @@
                      :gap "8px"
                      :height "fit-content"}}
     [:span "🔍"]
-    (if (:carregando? @filtro-state) "Filtrando..." "Filtrar")]])
+    (if (:carregando? @filtro-state) "Filtrando..." "Filtrar")]
+   
+   [:button {:on-click (fn []
+                         (swap! filtro-state assoc :data-inicio "" :data-fim "")
+                         (buscar-extrato-filtrado!))
+             :disabled (:carregando? @filtro-state)
+             :style {:background-color "#6c757d"
+                     :color "white"
+                     :padding "10px 20px"
+                     :border "none"
+                     :border-radius "4px"
+                     :cursor (if (:carregando? @filtro-state) "not-allowed" "pointer")
+                     :font-weight "bold"
+                     :display "flex"
+                     :align-items "center"
+                     :gap "8px"
+                     :height "fit-content"}}
+    [:span "🗑️"]
+    "Limpar"]])
 
 (defn tabela-transacoes [transacoes]
-  [:div {:style {:background-color "#2e2e2e"
-                 :padding "20px"
-                 :border-radius "8px"
-                 :box-shadow "0 4px 8px rgba(0, 0, 0, 0.2)"
-                 :color "white"
-                 :overflow-x "auto"}}
-   [:h3 {:style {:margin-top "0"
-                 :margin-bottom "20px"
-                 :border-bottom "1px solid #3a3a3a"
-                 :padding-bottom "15px"}}
-    "Histórico de Transações"]
-   
-   (if (empty? transacoes)
-     [:div {:style {:padding "40px"
-                    :text-align "center"
-                    :color "#ccc"}}
-      "Nenhuma transação encontrada no período selecionado."]
+  (let [transacoes-validas (if (or (nil? transacoes) (not (sequential? transacoes)))
+                             []
+                             transacoes)]
+    [:div {:style {:background-color "#2e2e2e"
+                   :padding "20px"
+                   :border-radius "8px"
+                   :box-shadow "0 4px 8px rgba(0, 0, 0, 0.2)"
+                   :color "white"
+                   :overflow-x "auto"}}
+     [:h3 {:style {:margin-top "0"
+                   :margin-bottom "20px"
+                   :border-bottom "1px solid #3a3a3a"
+                   :padding-bottom "15px"}}
+      "Histórico de Transações"]
+     
+     (if (empty? transacoes-validas)
+       [:div {:style {:padding "40px"
+                      :text-align "center"
+                      :color "#ccc"
+                      :font-size "16px"}}
+        "📭 Nenhuma transação encontrada no período selecionado."]
      [:table {:style {:width "100%"
                       :border-collapse "collapse"}}
       [:thead
@@ -218,7 +309,7 @@
                       :color "#ccc"
                       :font-weight "500"}} "Total"]]]
       [:tbody
-       (for [[idx transacao] (map-indexed vector transacoes)]
+       (for [[idx transacao] (map-indexed vector transacoes-validas)]
          (let [tipo (:tipo transacao)
                compra? (eh-compra? tipo)
                tipo-str (if compra? "COMPRA" "VENDA")
@@ -246,7 +337,7 @@
             [:td {:style {:padding "12px 15px"}}
              (if (:total transacao)
                (str "R$ " (.toLocaleString (js/Number. (:total transacao)) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2}))
-               "R$ 0,00")]]))]])])
+               "R$ 0,00")]]))]])])))
 
 (defn carteira-content []
   (let [transacoes (:transacoes @filtro-state)
