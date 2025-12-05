@@ -49,11 +49,9 @@
   (when (and data-str (not= data-str ""))
     (try
       (cond
-        ;; já está no formato yyyy-MM-dd
         (re-find #"^\d{4}-\d{2}-\d{2}$" data-str)
         data-str
 
-        ;; formato dd/MM/yyyy digitado manualmente
         (re-find #"^\d{2}/\d{2}/\d{4}$" data-str)
         (let [partes (clojure.string/split data-str #"/")
               dia (nth partes 0)
