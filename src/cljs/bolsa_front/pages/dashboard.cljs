@@ -2,16 +2,35 @@
   (:require [bolsa-front.externals :as evt]
             [bolsa-front.layout :as layout]))  
 
-(defn metric-card [title value subtitle]
+(defn format-pandl [value is-positive]
+  (let [cor (if is-positive "#4CAF50" "#ef4444") 
+        sinal (if is-positive "↑" "↓")]
+    [:div {:style {:font-size "24px" :font-weight "bold" :color cor :margin-bottom "10px" :display "flex" :align-items "center" :gap "8px"}}
+     [:span sinal]
+     [:span (str "R$ " (.toLocaleString (js/Number. (Math/abs value)) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2}))]]))
+
+
+(defn metric-card [title value subtitle helpbutton]
   [:div {:style {:background-color "#2e2e2e"
                  :padding "20px"
                  :border-radius "8px"
+                 :position "relative"
                  :box-shadow "0 4px 8px rgba(0, 0, 0, 0.2)"
                  :color "white"
                  :flex "1"
                  :min-width "300px"}}
-   [:div {:style {:font-size "14px" :color "#ccc" :margin-bottom "10px"}}
-    title]
+    [:div {:style {:font-size "14px" 
+                    :color "#ccc" 
+                    :margin-bottom "10px" 
+                    :display "flex" 
+                    :width "100%"
+                    :align-items "center" 
+                    :justify-content "space-between"}}
+      
+      [:span title] ;
+      
+      helpbutton    
+      ]
    [:div {:style {:font-size "32px" :font-weight "bold" :margin-bottom "5px"}}
     (if (number? value)
       (str "R$ " (.toLocaleString (js/Number. value) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2}))
@@ -100,22 +119,26 @@
                         :font-weight "bold"}}
        (if carregando? "Carregando..." " Recarregar Dados")]]
      [:div {:style {:display "flex" :gap "20px" :margin-bottom "30px" :flex-wrap "wrap"}}
-      (metric-card "Patrimônio Líquido"
+      
+      (metric-card "Patrimônio Líquido" 
                    patrimonio-liquido
                    (str (if (pos? lucro-prejuizo) "↑" "↓")
                         " R$ " (.toLocaleString (js/Number. (Math/abs lucro-prejuizo)) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2})
-                        " (" (.toFixed percentual-lucro 2) "%)"))
-      (metric-card "Valor Total Investido"
-                   total-investido-num
-                   nil)]
+                        " (" (.toFixed percentual-lucro 2) "%)")
+                        [layout/help-button "O que é patrimônio líquido?" "É teste"])
+
+     
+      ]
      (holdings-table saldo-por-ativo)
 
      (when erro
        [:p {:style {:color "red" :margin-top "20px" :text-align "center"}}
         "❌ Erro: " erro])
-
-     [:p {:style {:color "#ccc" :text-align "center" :margin-top "50px" :font-size "12px"}}
-      "Dados fornecidos pela BrAPI - Atualização em tempo real"]]))
+    
+        [:p {:style {:color "#ccc" :text-align "center" :margin-top "50px" :font-size "12px"}}
+      "Dados fornecidos pela BrAPI - Atualização em tempo real"]
+      
+     ]))
 
 
 

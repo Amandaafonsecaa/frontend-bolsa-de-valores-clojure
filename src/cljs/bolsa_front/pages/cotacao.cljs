@@ -191,7 +191,7 @@
                         }} 
            "Cotação de Ativos"]
 
-          [layout/help-button "O que vejo nesta tela?" "A cotação é o preço de mercado em tempo real. Fechamento Anterior é o último preço do dia útil anterior. Variação mostra a diferença percentual entre esses dois valores."]
+          [layout/help-button "O que vejo nesta tela?" "Abertura é o 1º preço negociado. Máximo/Mínimo é a faixa de preço atingida. Fechamento é a base de comparação do dia anterior."]
           ]
          [search-input termo-local]
 
