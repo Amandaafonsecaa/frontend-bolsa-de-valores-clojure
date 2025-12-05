@@ -75,8 +75,10 @@
                                  [jonase/eastwood "1.2.4"]
                                  [cider/cider-nrepl "0.26.0"]] 
                   
+                  ;; --- CORREÇÃO FINAL DA INFRAESTRUTURA AQUI ---
+                  ;; Garantimos que o código principal (src/cljs) seja listado primeiro e sempre.
+                  :source-paths ["src/cljs" "src/cljc" "env/dev/clj"  "env/dev/cljs" "test/cljs" ]
                   
-                  :source-paths ["env/dev/clj"  "env/dev/cljs" "test/cljs" ]
                   :resource-paths ["env/dev/resources"]
                   :repl-options {:init-ns user
                                  :timeout 120000}
