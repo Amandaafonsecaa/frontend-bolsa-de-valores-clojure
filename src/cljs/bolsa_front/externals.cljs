@@ -155,7 +155,7 @@
     (POST (str api-url "/transacoes/compra")
           {:params params
            :format :json
-           :response-format :json
+           
            
            :handler (fn [resposta]
                       (js/console.log "Compra realizada:" resposta) 

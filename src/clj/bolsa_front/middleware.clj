@@ -55,5 +55,3 @@
             (assoc-in [:security :anti-forgery] false)
             (dissoc :session)))
       wrap-internal-error))
-
-
