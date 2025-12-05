@@ -51,17 +51,17 @@ cd frontend-bolsa-de-valores-clojure
 
 2. Instale as dependências:
 ```bash
-lein deps
+lein run
 ```
 
 3. Inicie o servidor de desenvolvimento:
 ```bash
-lein figwheel
+npx shadow-cljs watch app
 ```
 
 4. Acesse a aplicação em:
 ```
-http://localhost:3449
+http://localhost:3001
 ```
 
 ## 📁 Estrutura do Projeto
