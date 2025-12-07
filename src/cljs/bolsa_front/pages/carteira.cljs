@@ -6,6 +6,10 @@
 
 (defonce filtro-state (r/atom {:data-inicio ""
                                :data-fim ""
+                               :pagina 1
+                               :limite 5
+                               :total-paginas 1
+                               :total-itens 0
                                :transacoes []
                                :carregando? false}))
 
@@ -19,7 +23,7 @@
   (if (nil? tipo)
     false
     (let [tipo-str (if (keyword? tipo) (name tipo) (str tipo))]
-      (= tipo-str "venda"))))
+     (= tipo-str "venda"))))
 
 (defn formatar-data [data-str]
   (if (and data-str (not= data-str ""))
@@ -76,7 +80,7 @@
               dia (nth partes 0)
               mes (nth partes 1)
               ano (nth partes 2)]
-          (str ano "-" mes "-" dia)))
+         (str ano "-" mes "-" dia)))
       (catch js/Error e
         data-iso))
     ""))
@@ -95,7 +99,8 @@
         (str data-completa)))
     ""))
 
-(defn data-no-periodo? [data-transacao data-inicio data-fim]
+(defn data-no-periodo?
+  [data-transacao data-inicio data-fim]
   (let [data-transacao-iso (extrair-data-sem-hora data-transacao)
         data-inicio-iso (if (and data-inicio (not= data-inicio "")) (converter-data-para-iso data-inicio) nil)
         data-fim-iso (if (and data-fim (not= data-fim "")) (converter-data-para-iso data-fim) nil)]
@@ -109,20 +114,12 @@
       data-fim-iso (<= (compare data-transacao-iso data-fim-iso) 0)
       :else true)))
 
-(defn filtrar-transacoes-por-data [transacoes data-inicio data-fim]
-  (if (or (nil? transacoes) (not (sequential? transacoes)))
-    []
-    (if (and (or (nil? data-inicio) (= data-inicio ""))
-             (or (nil? data-fim) (= data-fim "")))
-      transacoes
-      (filter (fn [transacao]
-                (data-no-periodo? (:data transacao) data-inicio data-fim))
-              transacoes))))
-
 (defn buscar-extrato-filtrado! []
   (swap! filtro-state assoc :carregando? true)
   (let [data-inicio-str (:data-inicio @filtro-state)
         data-fim-str (:data-fim @filtro-state)
+        pagina (:pagina @filtro-state) 
+        limite (:limite @filtro-state) 
         data-inicio-iso (normalizar-data-para-iso data-inicio-str)
         data-fim-iso (normalizar-data-para-iso data-fim-str)
         inicio-localdatetime (when data-inicio-iso
@@ -131,24 +128,30 @@
                             (str data-fim-iso "T23:59:59"))
         params (cond-> {}
                  inicio-localdatetime (assoc :data_inicio inicio-localdatetime)
-                 fim-localdatetime (assoc :data_fim fim-localdatetime))]
-    (js/console.log "🔍 Buscando extrato com filtros - Data início (input):" data-inicio-str "Data fim (input):" data-fim-str)
-    (js/console.log "🔍 Datas normalizadas - início:" data-inicio-iso "fim:" data-fim-iso)
-    (js/console.log "🔍 Parâmetros enviados ao backend:" params)
-    (evt/extrato-filtrado! params
-      (fn [transacoes]
-        (let [transacoes-recebidas (if (or (nil? transacoes) (not (sequential? transacoes)))
+                 fim-localdatetime (assoc :data_fim fim-localdatetime)
+                 true (assoc :pagina pagina)
+                 true (assoc :limite limite))]
+    (evt/extrato-filtrado!
+      params
+      (fn [resposta]
+        (let [transacoes-lista (get resposta :transacoes)
+              total-paginas (get resposta :total-paginas 1)
+              total-itens (get resposta :total-itens 0)
+              transacoes-recebidas (if (or (nil? transacoes-lista) (not (sequential? transacoes-lista)))
                                      []
-                                     transacoes)
-              transacoes-filtradas (filtrar-transacoes-por-data transacoes-recebidas data-inicio-str data-fim-str)]
-          (js/console.log "📥 Transações recebidas do backend (total):" (count transacoes-recebidas))
-          (js/console.log "📋 Datas das transações recebidas:" (map #(:data %) transacoes-recebidas))
-          (js/console.log "✅ Transações após filtro de data no frontend (total):" (count transacoes-filtradas))
-          (js/console.log "📋 Datas das transações filtradas:" (map #(:data %) transacoes-filtradas))
-          (swap! filtro-state assoc :transacoes transacoes-filtradas :carregando? false)))
+                                     transacoes-lista)]
+          (swap! filtro-state assoc 
+                 :transacoes transacoes-recebidas
+                 :total-paginas total-paginas
+                 :total-itens total-itens
+                 :carregando? false)))
       (fn [erro]
         (js/console.error "Erro ao buscar extrato:" erro)
         (swap! filtro-state assoc :transacoes [] :carregando? false)))))
+
+(defn atualizar-carteira!
+  []
+  (buscar-extrato-filtrado!))
 
 (defn calcular-totais [transacoes]
   (let [transacoes-validas (if (or (nil? transacoes) (not (sequential? transacoes)))
@@ -206,7 +209,7 @@
     [:input {:type "date"
              :value (:data-inicio @filtro-state)
              :on-change (fn [e]
-                         (swap! filtro-state assoc :data-inicio (-> e .-target .-value)))
+                          (swap! filtro-state assoc :data-inicio (-> e .-target .-value)))
              :style {:width "100%"
                      :padding "10px"
                      :background-color "#1e1e1e"
@@ -224,7 +227,7 @@
     [:input {:type "date"
              :value (:data-fim @filtro-state)
              :on-change (fn [e]
-                         (swap! filtro-state assoc :data-fim (-> e .-target .-value)))
+                          (swap! filtro-state assoc :data-fim (-> e .-target .-value)))
              :style {:width "100%"
                      :padding "10px"
                      :background-color "#1e1e1e"
@@ -233,7 +236,9 @@
                      :color "white"
                      :font-size "14px"}}]]
    
-   [:button {:on-click buscar-extrato-filtrado!
+   [:button {:on-click (fn [] 
+                         (swap! filtro-state assoc :pagina 1)
+                         (buscar-extrato-filtrado!))
              :disabled (:carregando? @filtro-state)
              :style {:background-color "#007bff"
                      :color "white"
@@ -250,7 +255,7 @@
     (if (:carregando? @filtro-state) "Filtrando..." "Filtrar")]
    
    [:button {:on-click (fn []
-                         (swap! filtro-state assoc :data-inicio "" :data-fim "")
+                         (swap! filtro-state assoc :data-inicio "" :data-fim "" :pagina 1)
                          (buscar-extrato-filtrado!))
              :disabled (:carregando? @filtro-state)
              :style {:background-color "#6c757d"
@@ -267,10 +272,104 @@
     [:span "🗑️"]
     "Limpar"]])
 
+(defn controles-paginacao []
+  (let [{:keys [pagina total-paginas carregando?]} @filtro-state
+        pode-anterior? (> pagina 1)
+        pode-proximo? (< pagina total-paginas)]
+    
+    [:div {:style {:display "flex"
+                   :justify-content "center"
+                   :align-items "center"
+                   :gap "10px"
+                   :margin-top "20px"
+                   :padding "15px"
+                   :background-color "#1e1e1e"
+                   :border-radius "8px"}}
+     
+     ;; Botão Anterior
+     [:button {:on-click (fn []
+                          (when pode-anterior?
+                            (swap! filtro-state update :pagina dec)
+                            (buscar-extrato-filtrado!)))
+               :disabled (or carregando? (not pode-anterior?))
+               :style {:background-color (if (and pode-anterior? (not carregando?))
+                                           "#007bff"
+                                           "#3a3a3a")
+                       :color (if (and pode-anterior? (not carregando?))
+                               "white"
+                               "#666")
+                       :padding "8px 16px"
+                       :border "none"
+                       :border-radius "4px"
+                       :cursor (if (and pode-anterior? (not carregando?))
+                                "pointer"
+                                "not-allowed")
+                       :font-weight "500"
+                       :transition "all 0.2s"}}
+      "← Anterior"]
+     
+     ;; Números das páginas
+     [:div {:style {:display "flex"
+                    :gap "5px"
+                    :align-items "center"}}
+      (for [num-pagina (range 1 (inc total-paginas))]
+        [:button {:key num-pagina
+                  :on-click (fn []
+                             (when (and (not carregando?) (not= num-pagina pagina))
+                               (swap! filtro-state assoc :pagina num-pagina)
+                               (buscar-extrato-filtrado!)))
+                  :disabled carregando?
+                  :style {:background-color (if (= num-pagina pagina)
+                                              "#007bff"
+                                              "#2e2e2e")
+                          :color "white"
+                          :padding "8px 12px"
+                          :border (if (= num-pagina pagina)
+                                   "2px solid #0056b3"
+                                   "1px solid #3a3a3a")
+                          :border-radius "4px"
+                          :cursor (if carregando? "not-allowed" "pointer")
+                          :font-weight (if (= num-pagina pagina) "bold" "normal")
+                          :min-width "40px"
+                          :transition "all 0.2s"}}
+         num-pagina])]
+     
+     ;; Botão Próximo
+     [:button {:on-click (fn []
+                          (when pode-proximo?
+                            (swap! filtro-state update :pagina inc)
+                            (buscar-extrato-filtrado!)))
+               :disabled (or carregando? (not pode-proximo?))
+               :style {:background-color (if (and pode-proximo? (not carregando?))
+                                           "#007bff"
+                                           "#3a3a3a")
+                       :color (if (and pode-proximo? (not carregando?))
+                               "white"
+                               "#666")
+                       :padding "8px 16px"
+                       :border "none"
+                       :border-radius "4px"
+                       :cursor (if (and pode-proximo? (not carregando?))
+                                "pointer"
+                                "not-allowed")
+                       :font-weight "500"
+                       :transition "all 0.2s"}}
+      "Próximo →"]
+     
+     ;; Informação da página atual
+     [:div {:style {:color "#ccc"
+                    :font-size "14px"
+                    :margin-left "10px"
+                    :padding "8px 12px"
+                    :background-color "#2e2e2e"
+                    :border-radius "4px"}}
+      (str "Página " pagina " de " total-paginas)]]))
+
 (defn tabela-transacoes [transacoes]
   (let [transacoes-validas (if (or (nil? transacoes) (not (sequential? transacoes)))
                              []
-                             transacoes)]
+                             transacoes)
+        {:keys [total-paginas carregando?]} @filtro-state]
     [:div {:style {:background-color "#2e2e2e"
                    :padding "20px"
                    :border-radius "8px"
@@ -288,85 +387,93 @@
                       :text-align "center"
                       :color "#ccc"
                       :font-size "16px"}}
-        "📭 Nenhuma transação encontrada no período selecionado."]
-     [:table {:style {:width "100%"
-                      :border-collapse "collapse"}}
-      [:thead
-       [:tr
-        [:th {:style {:padding "12px 15px"
-                      :text-align "left"
-                      :border-bottom "2px solid #3a3a3a"
-                      :color "#ccc"
-                      :font-weight "500"}} "Data"]
-        [:th {:style {:padding "12px 15px"
-                      :text-align "left"
-                      :border-bottom "2px solid #3a3a3a"
-                      :color "#ccc"
-                      :font-weight "500"}} "Tipo"]
-        [:th {:style {:padding "12px 15px"
-                      :text-align "left"
-                      :border-bottom "2px solid #3a3a3a"
-                      :color "#ccc"
-                      :font-weight "500"}} "Ticker"]
-        [:th {:style {:padding "12px 15px"
-                      :text-align "left"
-                      :border-bottom "2px solid #3a3a3a"
-                      :color "#ccc"
-                      :font-weight "500"}} "Quantidade"]
-        [:th {:style {:padding "12px 15px"
-                      :text-align "left"
-                      :border-bottom "2px solid #3a3a3a"
-                      :color "#ccc"
-                      :font-weight "500"}} "Preço"]
-        [:th {:style {:padding "12px 15px"
-                      :text-align "left"
-                      :border-bottom "2px solid #3a3a3a"
-                      :color "#ccc"
-                      :font-weight "500"}} "Total"]]]
-      [:tbody
-       (for [[idx transacao] (map-indexed vector transacoes-validas)]
-         (let [tipo (:tipo transacao)
-               compra? (eh-compra? tipo)
-               tipo-str (if compra? "COMPRA" "VENDA")
-               cor-tipo (if compra? "#4CAF50" "#f44336")]
-           [:tr {:key (str idx "-" (:data transacao) "-" (:ticker transacao) "-" (:quantidade transacao))
-                 :style {:border-bottom "1px solid #3a3a3a"}}
-            [:td {:style {:padding "12px 15px"}}
-             (formatar-data (:data transacao))]
-            [:td {:style {:padding "12px 15px"}}
-             [:span {:style {:background-color cor-tipo
-                            :color "white"
-                            :padding "4px 12px"
-                            :border-radius "12px"
-                            :font-size "12px"
-                            :font-weight "bold"}}
-              tipo-str]]
-            [:td {:style {:padding "12px 15px"}}
-             (str (:ticker transacao))]
-            [:td {:style {:padding "12px 15px"}}
-             (str (:quantidade transacao))]
-            [:td {:style {:padding "12px 15px"}}
-             (if (:preco transacao)
-               (str "R$ " (.toLocaleString (js/Number. (:preco transacao)) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2}))
-               "R$ 0,00")]
-            [:td {:style {:padding "12px 15px"}}
-             (if (:total transacao)
-               (str "R$ " (.toLocaleString (js/Number. (:total transacao)) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2}))
-               "R$ 0,00")]]))]])]))
+        "🔭 Nenhuma transação encontrada no período selecionado."]
+       [:div
+        [:table {:style {:width "100%"
+                         :border-collapse "collapse"}}
+         [:thead
+          [:tr
+           [:th {:style {:padding "12px 15px"
+                         :text-align "left"
+                         :border-bottom "2px solid #3a3a3a"
+                         :color "#ccc"
+                         :font-weight "500"}} "Data"]
+           [:th {:style {:padding "12px 15px"
+                         :text-align "left"
+                         :border-bottom "2px solid #3a3a3a"
+                         :color "#ccc"
+                         :font-weight "500"}} "Tipo"]
+           [:th {:style {:padding "12px 15px"
+                         :text-align "left"
+                         :border-bottom "2px solid #3a3a3a"
+                         :color "#ccc"
+                         :font-weight "500"}} "Ticker"]
+           [:th {:style {:padding "12px 15px"
+                         :text-align "left"
+                         :border-bottom "2px solid #3a3a3a"
+                         :color "#ccc"
+                         :font-weight "500"}} "Quantidade"]
+           [:th {:style {:padding "12px 15px"
+                         :text-align "left"
+                         :border-bottom "2px solid #3a3a3a"
+                         :color "#ccc"
+                         :font-weight "500"}} "Preço"]
+           [:th {:style {:padding "12px 15px"
+                         :text-align "left"
+                         :border-bottom "2px solid #3a3a3a"
+                         :color "#ccc"
+                         :font-weight "500"}} "Total"]]]
+         [:tbody
+          (for [[idx transacao] (map-indexed vector transacoes-validas)]
+            (let [tipo (:tipo transacao)
+                  compra? (eh-compra? tipo)
+                  tipo-str (if compra? "COMPRA" "VENDA")
+                  cor-tipo (if compra? "#4CAF50" "#f44336")]
+              [:tr {:key (str idx "-" (:data transacao) "-" (:ticker transacao) "-" (:quantidade transacao))
+                    :style {:border-bottom "1px solid #3a3a3a"}}
+               [:td {:style {:padding "12px 15px"}}
+                (formatar-data (:data transacao))]
+               [:td {:style {:padding "12px 15px"}}
+                [:span {:style {:background-color cor-tipo
+                               :color "white"
+                               :padding "4px 12px"
+                               :border-radius "12px"
+                               :font-size "12px"
+                               :font-weight "bold"}}
+                 tipo-str]]
+               [:td {:style {:padding "12px 15px"}}
+                (str (:ticker transacao))]
+               [:td {:style {:padding "12px 15px"}}
+                (str (:quantidade transacao))]
+               [:td {:style {:padding "12px 15px"}}
+                (if (:preco transacao)
+                  (str "R$ " (.toLocaleString (js/Number. (:preco transacao)) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2}))
+                  "R$ 0,00")]
+               [:td {:style {:padding "12px 15px"}}
+                (if (:total transacao)
+                  (str "R$ " (.toLocaleString (js/Number. (:total transacao)) "pt-BR" {:minimumFractionDigits 2 :maximumFractionDigits 2}))
+                  "R$ 0,00")]]))]]
+        
+        (when (and (> total-paginas 1) (not carregando?))
+          [controles-paginacao])])]))
 
 (defn carteira-content []
-  (let [transacoes (:transacoes @filtro-state)
-        totais (calcular-totais transacoes)]
+  (r/create-class
+   {:component-did-mount
+    (fn []
+      (swap! evt/app-state assoc :atualizar-carteira-fn buscar-extrato-filtrado!)
+      (buscar-extrato-filtrado!))
     
-    (r/create-class
-     {:component-did-mount
-      (fn []
-        (buscar-extrato-filtrado!))
-      
-      :reagent-render
-      (fn []
+    :component-will-unmount
+    (fn []
+      (swap! evt/app-state assoc :atualizar-carteira-fn nil))
+    
+    :reagent-render
+    (fn []
+      (let [{:keys [transacoes carregando?]} @filtro-state
+            totais (calcular-totais transacoes)]
         [:div {:style {:color "white" :padding-top "30px" :display "flex"
-                       :flex-direction "column" }}
+                       :flex-direction "column"}}
          [:h1 {:style {:margin "20px" :font-weight "800"
                        :font-size "24px" :text-align "center"}}
           "Extrato da Carteira"]
@@ -376,27 +483,26 @@
                         :margin-bottom "30px"
                         :flex-wrap "wrap"}}
           (card-resumo "Total de Transações"
-                      (:total-transacoes totais)
-                      "#007bff"
-                      "📊")
+                       (:total-transacoes totais)
+                       "#007bff"
+                       "📊")
           (card-resumo "Total Comprado"
-                      (:total-comprado totais)
-                      "#4CAF50"
-                      "📈")
+                       (:total-comprado totais)
+                       "#4CAF50"
+                       "📈")
           (card-resumo "Total Vendido"
-                      (:total-vendido totais)
-                      "#f44336"
-                      "📉")]
+                       (:total-vendido totais)
+                       "#f44336"
+                       "📉")]
          
          [filtro-data]
          [tabela-transacoes transacoes]
          
          (when (:erro @evt/app-state)
            [:p {:style {:color "#f44336"
-                       :margin-top "20px"
-                       :text-align "center"}}
-            "❌ Erro: " (:erro @evt/app-state)])])})))
+                        :margin-top "20px"
+                        :text-align "center"}}
+            "❌ Erro: " (:erro @evt/app-state)])]))}))
 
 (defn carteira-page []
   [layout/main-layout "Carteira" [carteira-content]])
-

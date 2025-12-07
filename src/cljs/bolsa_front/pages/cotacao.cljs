@@ -179,20 +179,11 @@
                        :flex-direction "column"
                        :align-items "center"
                        :padding-top "20px"}}
-         [:div {:style {:display "flex"
-                        :align-items "center"
-                        :margin-bottom "30px" ; Margem para separar do input
-                        :margin-top "20px" ; Margem do topo para respirar
-                        }}
+         
+         [:h1 {:style {:color "white" :font-weight "800"
+                     :font-size "24px" :margin "28px" :margin-bottom "30px"}} 
+          "Cotação de Ativos"]
 
-          [:h1 {:style {:color "white" 
-                        :font-weight "800"
-                        :font-size "24px"
-                        }} 
-           "Cotação de Ativos"]
-
-          [layout/help-button "O que vejo nesta tela?" "Abertura é o 1º preço negociado. Máximo/Mínimo é a faixa de preço atingida. Fechamento é a base de comparação do dia anterior."]
-          ]
          [search-input termo-local]
 
          (when carregando?

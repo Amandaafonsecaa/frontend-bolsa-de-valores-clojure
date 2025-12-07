@@ -1,7 +1,8 @@
 (ns bolsa-front.externals
   (:require [reagent.core :as r]
             [ajax.core :refer [GET POST]]
-            [clojure.string]))
+            [clojure.string]
+            [bolsa-front.state :as state]))
 
 (defonce app-state (r/atom {:acoes []         
                             :saldo-por-ativo {}         
@@ -10,7 +11,8 @@
                             :patrimonio 0.0
                             :cotacao-atual nil
                             :carregando? false
-                            :erro nil}))
+                            :erro nil
+                            :atualizar-carteira-fn nil}))
 
 (def api-url "http://localhost:3000")
 
@@ -155,7 +157,7 @@
     (POST (str api-url "/transacoes/compra")
           {:params params
            :format :json
-           
+           :response-format :json
            
            :handler (fn [resposta]
                       (js/console.log "Compra realizada:" resposta) 
@@ -164,7 +166,9 @@
                       (extrato!)
                       (saldo-por-ativo!)
                       (valor-investido)
-                      (patrimonio!))
+                      (patrimonio!)
+                      (when-let [atualizar-fn (:atualizar-carteira-fn @app-state)]
+                        (atualizar-fn)))
            
            :error-handler (fn [erro]
                             (js/console.error "Erro completo na Compra:" erro)
@@ -220,7 +224,9 @@
                       (extrato!)
                       (saldo-por-ativo!)
                       (valor-investido)
-                      (patrimonio!))
+                      (patrimonio!)
+                      (when-let [atualizar-fn (:atualizar-carteira-fn @app-state)]
+                        (atualizar-fn)))
            
            :error-handler (fn [erro]
                             (js/console.error "Erro completo na Venda:" erro)
